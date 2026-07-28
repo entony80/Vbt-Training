@@ -1,0 +1,2033 @@
+<!DOCTYPE html>
+<html lang="it">
+<head><style id="body-theme-force">html[data-theme="light"] body{background:#f4f7fb !important;color:#0f172a !important}html[data-theme="dark"] body{background:#0a0a0f !important;color:#e8e8f0 !important}</style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0a0a0f">
+<title>VBT Tracker V4.5</title>
+<style>
+:root {
+  --bg:#0a0a0f; --surface:#12121a; --card:#1a1a28; --border:#2a2a3f;
+  --text:#e8e8f0; --muted:#6b6b8a; --dim:#3a3a55;
+  --green:#22c55e; --green-bg:#052e16;
+  --orange:#f59e0b; --orange-bg:#1c1007;
+  --red:#ef4444; --red-bg:#1c0505;
+  --blue:#3b82f6;
+  --font-data:'SF Mono','Fira Mono','Consolas',monospace;
+  --font-ui:-apple-system,'Segoe UI',sans-serif;
+  --r:14px; --r-sm:8px;
+}
+[data-theme="light"] {
+  --bg:#f0f2f7; --surface:#ffffff; --card:#ffffff; --border:#d8dce8;
+  --text:#111827; --muted:#6b7280; --dim:#c0c5d5;
+  --green:#16a34a; --green-bg:#dcfce7;
+  --orange:#d97706; --orange-bg:#fef3c7;
+  --red:#dc2626; --red-bg:#fee2e2;
+  --blue:#2563eb;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{background:var(--bg);color:var(--text);font-family:var(--font-ui);min-height:100dvh;overscroll-behavior:none;}
+.app{max-width:480px;margin:0 auto;padding:0 16px 32px;display:flex;flex-direction:column;gap:12px;}
+.header{padding:20px 0 4px;display:flex;align-items:center;gap:10px;}
+.header h1{font-size:22px;font-weight:700;letter-spacing:-0.5px;}
+.version{font-size:11px;color:var(--muted);font-family:var(--font-data);}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--dim);transition:all .3s;}
+.dot.active{background:var(--red);box-shadow:0 0 0 3px rgba(239,68,68,.25);animation:pulse 1s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* ── BANNER SENSORE ── */
+.sensor-banner{background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.35);
+  border-radius:var(--r);padding:14px;text-align:center;}
+.sensor-banner p{font-size:13px;color:#93c5fd;line-height:1.5;margin-bottom:10px;}
+.sensor-banner.ok{background:rgba(34,197,94,.10);border-color:rgba(34,197,94,.35);}
+.sensor-banner.ok p{color:#86efac;}
+.sensor-banner.err{background:rgba(239,68,68,.10);border-color:rgba(239,68,68,.35);}
+.sensor-banner.err p{color:#fca5a5;}
+
+/* ── CARD ── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:16px;}
+.card-label{font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;}
+.field{display:flex;flex-direction:column;gap:5px;margin-bottom:12px;}
+.field:last-child{margin-bottom:0;}
+.field label{font-size:11px;color:var(--muted);font-weight:500;}
+.field select,.field input{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);
+  color:var(--text);font-size:16px;font-family:var(--font-ui);padding:11px 13px;width:100%;
+  outline:none;-webkit-appearance:none;appearance:none;transition:border-color .2s;}
+.field select:focus,.field input:focus{border-color:var(--blue);}
+.row-2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+.soglia-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+.soglia-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 12px;}
+.soglia-box label{font-size:10px;font-weight:600;display:block;margin-bottom:4px;}
+.soglia-box.smin label{color:var(--red);}
+.soglia-box.starget label{color:var(--green);}
+.soglia-box input{background:transparent;border:none;color:var(--text);font-size:20px;
+  font-family:var(--font-data);font-weight:600;width:100%;outline:none;padding:0;}
+
+/* ── BUTTONS ── */
+.btn-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:4px;}
+.btn{border:none;border-radius:var(--r-sm);font-size:13px;font-weight:600;
+  font-family:var(--font-ui);padding:13px 8px;cursor:pointer;
+  transition:opacity .15s,transform .1s;user-select:none;}
+.btn:active{transform:scale(.96);}
+.btn:disabled{opacity:.3;cursor:default;transform:none;}
+.btn-cal{background:var(--card);color:var(--text);border:1px solid var(--border);}
+.btn-go{background:var(--green);color:#000;}
+.btn-stop{background:var(--red);color:#fff;}
+.btn-row2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.btn-save{background:var(--card);color:var(--text);border:1px solid var(--border);}
+.btn-csv{background:var(--blue);color:#fff;}
+
+/* ── ASSE SELECTOR ── */
+.asse-row{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;margin-bottom:12px;}
+.asse-btn{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);
+  padding:8px 4px;text-align:center;font-size:12px;font-weight:600;color:var(--muted);
+  cursor:pointer;transition:all .2s;font-family:var(--font-data);}
+.asse-btn.sel{background:rgba(59,130,246,.15);border-color:var(--blue);color:#93c5fd;}
+
+/* ── LIVE ── */
+.live-card{background:var(--card);border:2px solid var(--border);border-radius:var(--r);overflow:hidden;transition:border-color .3s;}
+.live-card.verde{border-color:var(--green);}
+.live-card.orange{border-color:var(--orange);}
+.live-card.rossa{border-color:var(--red);}
+.vel-main{padding:22px 16px 14px;text-align:center;transition:background .3s;}
+.vel-main.verde{background:var(--green-bg);}
+.vel-main.orange{background:var(--orange-bg);}
+.vel-main.rossa{background:var(--red-bg);}
+.vel-num{font-size:76px;font-weight:800;font-family:var(--font-data);letter-spacing:-4px;line-height:1;color:var(--text);transition:color .3s;}
+.vel-num.verde{color:var(--green);}
+.vel-num.orange{color:var(--orange);}
+.vel-num.rossa{color:var(--red);}
+.vel-unit{font-size:13px;color:var(--muted);font-family:var(--font-data);margin-top:3px;}
+.status-tag{font-size:12px;font-weight:700;margin-top:10px;padding:5px 16px;
+  border-radius:20px;display:inline-block;color:var(--muted);background:rgba(107,107,138,.12);}
+.status-tag.verde{color:var(--green);background:rgba(34,197,94,.13);}
+.status-tag.orange{color:var(--orange);background:rgba(245,158,11,.13);}
+.status-tag.rossa{color:var(--red);background:rgba(239,68,68,.13);}
+
+.metrics-row{display:grid;grid-template-columns:1fr 1px 1fr 1px 1fr;border-top:1px solid var(--border);}
+.metric{padding:13px 8px;text-align:center;}
+.mdiv{background:var(--border);align-self:stretch;}
+.mlabel{font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:5px;}
+.mval{font-size:22px;font-weight:700;font-family:var(--font-data);color:var(--text);transition:color .3s;}
+.mval.ok{color:var(--green);}
+.mval.bad{color:var(--red);}
+.msub{font-size:10px;color:var(--dim);font-family:var(--font-data);margin-top:2px;}
+
+/* ── SIGNAL BAR ── */
+.signal-wrap{padding:10px 16px 14px;border-top:1px solid var(--border);}
+.signal-label{font-size:10px;color:var(--muted);margin-bottom:6px;display:flex;justify-content:space-between;}
+.signal-bar-bg{height:8px;background:var(--surface);border-radius:4px;overflow:hidden;}
+.signal-bar-fill{height:100%;width:0%;border-radius:4px;transition:width .08s,background .08s;}
+
+/* ── REP LIST ── */
+.rep-list{display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto;}
+.rep-row{display:flex;align-items:center;gap:10px;padding:8px 10px;
+  background:var(--surface);border-radius:var(--r-sm);border-left:3px solid transparent;}
+.rep-row.verde{border-left-color:var(--green);}
+.rep-row.orange{border-left-color:var(--orange);}
+.rep-row.rossa{border-left-color:var(--red);}
+.rep-n{font-size:11px;color:var(--muted);font-family:var(--font-data);min-width:38px;}
+.rep-v{font-size:16px;font-weight:700;font-family:var(--font-data);flex:1;}
+.rep-v.verde{color:var(--green);}
+.rep-v.orange{color:var(--orange);}
+.rep-v.rossa{color:var(--red);}
+.rep-meta{font-size:11px;color:var(--muted);font-family:var(--font-data);}
+.empty{text-align:center;padding:20px;color:var(--dim);font-size:13px;}
+
+/* ── DIAGNOSTICA ── */
+.diag-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;}
+.diag-cell{background:var(--surface);border-radius:var(--r-sm);padding:8px 10px;}
+.diag-axis{font-size:9px;color:var(--muted);font-weight:600;letter-spacing:1px;margin-bottom:3px;}
+.diag-val{font-size:14px;font-family:var(--font-data);color:var(--text);}
+.diag-pills{display:flex;gap:6px;flex-wrap:wrap;}
+.pill{font-size:10px;font-family:var(--font-data);color:var(--muted);
+  background:var(--surface);border-radius:20px;padding:4px 10px;}
+.pill.ok{color:var(--green);background:rgba(34,197,94,.08);}
+.pill.warn{color:var(--orange);background:rgba(245,158,11,.08);}
+.pill.err{color:var(--red);background:rgba(239,68,68,.08);}
+
+/* ── TOGGLE ── */
+.tog-hdr{display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;}
+.tog-arr{font-size:12px;color:var(--muted);transition:transform .2s;}
+.tog-arr.open{transform:rotate(180deg);}
+.collap{overflow:hidden;transition:max-height .3s ease;max-height:0;}
+.collap.open{max-height:600px;}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(60px);
+  background:var(--card);border:1px solid var(--border);border-radius:20px;
+  padding:10px 20px;font-size:13px;font-weight:500;white-space:nowrap;
+  transition:transform .3s cubic-bezier(.34,1.56,.64,1),opacity .3s;
+  opacity:0;z-index:999;}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+
+/* ── THEME TOGGLE ── */
+.theme-toggle{display:flex;align-items:center;gap:6px;margin-left:auto;}
+.theme-icon{font-size:14px;line-height:1;}
+.tog-switch{position:relative;width:40px;height:22px;flex-shrink:0;}
+.tog-switch input{opacity:0;width:0;height:0;position:absolute;}
+.tog-slider{position:absolute;inset:0;background:var(--dim);border-radius:11px;
+  cursor:pointer;transition:background .25s;}
+.tog-slider::before{content:'';position:absolute;width:16px;height:16px;
+  left:3px;top:3px;background:#fff;border-radius:50%;
+  transition:transform .25s;}
+.tog-switch input:checked + .tog-slider{background:var(--blue);}
+.tog-switch input:checked + .tog-slider::before{transform:translateX(18px);}
+</style>
+
+<style id="theme-force-override">
+html,body{color-scheme:dark;}
+html[data-theme="light"] body{background:#f4f7fb !important;color:#0f172a !important;}
+html[data-theme="light"] .app,html[data-theme="light"] .card,html[data-theme="light"] .live-card,html[data-theme="light"] .sensor-banner,html[data-theme="light"] .diag-cell,html[data-theme="light"] .rep-row,html[data-theme="light"] .signal-bar-bg,html[data-theme="light"] .soglia-box{background-color:#fff !important;color:#0f172a !important;border-color:#d5dbe6 !important;}
+html[data-theme="dark"] body{background:#0a0a0f !important;color:#e8e8f0 !important;}
+html[data-theme="dark"] .app,html[data-theme="dark"] .card,html[data-theme="dark"] .live-card,html[data-theme="dark"] .sensor-banner,html[data-theme="dark"] .diag-cell,html[data-theme="dark"] .rep-row,html[data-theme="dark"] .signal-bar-bg,html[data-theme="dark"] .soglia-box{background-color:#12121a !important;color:#e8e8f0 !important;border-color:#2a2a3f !important;}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <h1>⚡ VBT</h1>
+    <span class="version">v4.5</span>
+    <div class="theme-toggle">
+      <span class="theme-icon">🌙</span>
+      <label class="tog-switch" title="Cambia tema">
+        <input type="checkbox" id="themeSwitch">
+        <span class="tog-slider"></span>
+      </label>
+      <span class="theme-icon">☀️</span>
+    </div>
+    <div class="dot" id="dot"></div>
+  </div>
+
+  <!-- BANNER SENSORE -->
+  <div class="sensor-banner" id="sensorBanner">
+    <p>Premi il pulsante per attivare il sensore di movimento.<br>
+    Su iOS apri in Safari · Su Android apri in Chrome.</p>
+    <button class="btn btn-go" style="width:100%;font-size:14px;padding:14px" onclick="attivaPermesso()">
+      📡 Attiva sensore accelerometro
+    </button>
+  </div>
+
+  <!-- CONFIGURAZIONE -->
+  <div class="card" id="configCard" style="display:none">
+    <div class="card-label">Configurazione</div>
+
+    <div class="field">
+      <label>Atleta</label>
+      <input type="text" id="inAtleta" placeholder="Nome atleta"
+             style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);
+                    color:var(--text);font-size:16px;font-family:var(--font-ui);
+                    padding:11px 13px;width:100%;outline:none;transition:border-color .2s;">
+    </div>
+
+    <div class="field">
+      <label>Esercizio</label>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <select id="selEs" onchange="aggiornaSoglie()" style="flex:1;min-width:0;"></select>
+        <button type="button" id="editEsBtn"
+                style="border:none;background:var(--surface);color:var(--blue);
+                       border-radius:8px;width:34px;height:38px;font-size:15px;
+                       flex-shrink:0;cursor:pointer;border:1px solid var(--border);
+                       display:flex;align-items:center;justify-content:center;">✏️</button>
+      </div>
+    </div>
+
+    <div class="row-3" style="margin-bottom:12px">
+      <div class="field" style="margin-bottom:0">
+        <label>% 1RM</label>
+        <select id="sel1RM" onchange="aggiornaSoglie1RM()"></select>
+      </div>
+      <div class="field" style="margin-bottom:0">
+        <label>N° Serie</label>
+        <input type="number" id="inNSerie" value="1" min="1" max="20" inputmode="numeric"
+               style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);
+                      color:var(--text);font-size:16px;font-family:var(--font-ui);
+                      padding:11px 13px;width:100%;outline:none;-webkit-appearance:none;appearance:none;transition:border-color .2s;">
+      </div>
+      <div class="field" style="margin-bottom:0">
+        <label>Rep rif.</label>
+        <input type="number" id="inRepRange" min="1" max="6" inputmode="numeric"
+               onchange="aggiornaSoglie1RM()"
+               style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);
+                      color:var(--text);font-size:16px;font-family:var(--font-ui);
+                      padding:11px 13px;width:100%;outline:none;-webkit-appearance:none;appearance:none;transition:border-color .2s;">
+      </div>
+    </div>
+
+    <div class="row-2" style="margin-bottom:12px">
+      <div class="field" style="margin-bottom:0">
+        <div style="display:flex;align-items:center;height:28px;margin-bottom:5px;">
+          <label style="margin:0">Carico (kg)</label>
+        </div>
+        <input type="number" id="inCarico" placeholder="120" inputmode="numeric">
+      </div>
+      <div class="field" style="margin-bottom:0">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;height:28px;margin-bottom:5px;">
+          <label style="margin:0">Soglia attivazione (m/s²)</label>
+          <button type="button" id="helpSoglieBtn" aria-label="Aiuto soglie" style="border:none;background:var(--blue);color:#fff;width:28px;height:28px;border-radius:50%;font-weight:700;cursor:pointer;line-height:1;flex:0 0 auto;font-size:14px;">?</button>
+        </div>
+        <input type="number" id="inSogAtt" value="0.8" step="0.05" inputmode="decimal">
+      </div>
+    </div>
+
+    <div class="soglia-row">
+      <div class="soglia-box smin">
+        <label>🔴 SOGLIA MIN (m/s)</label>
+        <input type="number" id="inSMin" value="0.30" step="0.05" inputmode="decimal">
+      </div>
+      <div class="soglia-box starget">
+        <label>✅ TARGET (m/s)</label>
+        <input type="number" id="inSTgt" value="0.55" step="0.05" inputmode="decimal">
+      </div>
+    </div>
+
+    <!-- SELEZIONE ASSE -->
+    <div class="field" style="margin-bottom:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+        <label style="margin:0">Asse rilevamento (scegli dopo calibrazione)</label>
+        <button type="button" id="helpAsseBtn" aria-label="Aiuto asse" style="border:none;background:var(--blue);color:#fff;width:28px;height:28px;border-radius:50%;font-weight:700;cursor:pointer;line-height:1;flex:0 0 auto">?</button>
+      </div>
+    </div>
+    <div class="asse-row" id="asseRow">
+      <div class="asse-btn" data-asse="auto" onclick="setAsse('auto')">AUTO</div>
+      <div class="asse-btn" data-asse="x" onclick="setAsse('x')">X</div>
+      <div class="asse-btn" data-asse="y" onclick="setAsse('y')">Y</div>
+      <div class="asse-btn" data-asse="z" onclick="setAsse('z')">Z</div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-cal" id="btnCal" onclick="calibra()">⚙️ Calibra</button>
+      <button class="btn btn-go"  id="btnGo"  onclick="avvia()" disabled>▶ Avvia</button>
+      <button class="btn btn-stop" id="btnStop" onclick="ferma()" disabled>⏹ Stop</button>
+    </div>
+  </div>
+
+  <!-- LIVE DISPLAY -->
+  <div class="live-card" id="liveCard" style="display:none">
+    <div class="vel-main" id="velMain">
+      <div class="vel-num" id="numVel">—</div>
+      <div class="vel-unit">m/s · velocità media</div>
+      <div class="status-tag" id="tagStatus">In attesa</div>
+    </div>
+
+    <!-- SIGNAL PIPELINE: 3 livelli raw / filtrato / velocità (V4.5) -->
+    <div class="signal-wrap">
+      <!-- Livello 1: sensore grezzo -->
+      <div class="signal-label" style="margin-bottom:3px">
+        <span style="font-size:9px;letter-spacing:.8px;text-transform:uppercase;color:var(--muted)">1 · Raw m/s²</span>
+        <span id="lblAzRaw" style="font-family:var(--font-data);font-size:10px">0.000</span>
+      </div>
+      <div class="signal-bar-bg" style="margin-bottom:6px">
+        <div class="signal-bar-fill" id="barFill" style="background:var(--blue)"></div>
+      </div>
+      <!-- Livello 2: segnale filtrato LPF adattivo -->
+      <div class="signal-label" style="margin-bottom:3px">
+        <span style="font-size:9px;letter-spacing:.8px;text-transform:uppercase;color:var(--muted)">2 · Filtrato m/s²</span>
+        <span id="lblAzFilt" style="font-family:var(--font-data);font-size:10px">0.000</span>
+      </div>
+      <div class="signal-bar-bg" style="margin-bottom:6px">
+        <div class="signal-bar-fill" id="barFiltFill" style="background:var(--orange)"></div>
+      </div>
+      <!-- Livello 3: velocità integrata live -->
+      <div class="signal-label" style="margin-bottom:3px">
+        <span style="font-size:9px;letter-spacing:.8px;text-transform:uppercase;color:var(--muted)">3 · Vel. integrata m/s</span>
+        <span id="lblVelLive" style="font-family:var(--font-data);font-size:10px">0.00</span>
+      </div>
+      <div class="signal-bar-bg">
+        <div class="signal-bar-fill" id="barVelFill" style="background:var(--green)"></div>
+      </div>
+    </div>
+
+    <div class="metrics-row">
+      <div class="metric">
+        <div class="mlabel">REP</div>
+        <div class="mval" id="numRep">0</div>
+      </div>
+      <div class="mdiv"></div>
+      <div class="metric">
+        <div class="mlabel">V.PICCO</div>
+        <div class="mval" id="numPicco">—</div>
+        <div class="msub">m/s</div>
+      </div>
+      <div class="mdiv"></div>
+      <div class="metric">
+        <div class="mlabel">V.LOSS</div>
+        <div class="mval" id="numLoss">—</div>
+        <div class="msub">vs rep1</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STORICO REP -->
+  <div class="card" id="storicoCard" style="display:none">
+    <div class="tog-hdr" onclick="tog('storicoBody','storicoArr')">
+      <div style="display:flex;align-items:center;gap:8px;margin:0">
+        <div class="card-label" style="margin:0" id="storicoLabel">Storico serie</div>
+        <button type="button" id="helpMetricheBtn"
+                onclick="event.stopPropagation()"
+                style="border:none;background:var(--surface);color:var(--blue);
+                       border-radius:50%;width:20px;height:20px;font-size:11px;font-weight:700;
+                       line-height:1;cursor:pointer;display:flex;align-items:center;
+                       justify-content:center;flex-shrink:0;border:1px solid var(--border);">ℹ</button>
+      </div>
+      <div class="tog-arr open" id="storicoArr">▼</div>
+    </div>
+    <div class="collap open" id="storicoBody" style="margin-top:12px">
+      <!-- V4.3: riepilogo aggregato per serie -->
+      <div id="setSummary" style="display:none;background:var(--surface);border-radius:var(--r-sm);
+           padding:10px 12px;margin-bottom:10px;font-family:var(--font-data);font-size:11px;
+           display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;"></div>
+      <div class="rep-list" id="repList">
+        <div class="empty">Nessuna ripetizione ancora</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DIAGNOSTICA -->
+  <div class="card" id="diagCard" style="display:none">
+    <div class="tog-hdr" onclick="tog('diagBody','diagArr')">
+      <div class="card-label" style="margin:0">Diagnostica sensore</div>
+      <div class="tog-arr" id="diagArr">▼</div>
+    </div>
+    <div class="collap" id="diagBody" style="margin-top:12px">
+      <div class="diag-grid">
+        <div class="diag-cell"><div class="diag-axis">ASSE X</div><div class="diag-val" id="dX">—</div></div>
+        <div class="diag-cell"><div class="diag-axis">ASSE Y</div><div class="diag-val" id="dY">—</div></div>
+        <div class="diag-cell"><div class="diag-axis">ASSE Z</div><div class="diag-val" id="dZ">—</div></div>
+      </div>
+      <div class="diag-grid">
+        <div class="diag-cell"><div class="diag-axis">AZ NETTO</div><div class="diag-val" id="dAzN">—</div></div>
+        <div class="diag-cell"><div class="diag-axis">ASSE SEL.</div><div class="diag-val" id="dAsseAtt">—</div></div>
+        <div class="diag-cell"><div class="diag-axis">HZ REALE</div><div class="diag-val" id="dHz">—</div></div>
+      </div>
+      <div class="diag-pills">
+        <span class="pill" id="pStato">pronto</span>
+        <span class="pill" id="pCamp">campioni: 0</span>
+        <span class="pill" id="pCal">non calibrato</span>
+        <span class="pill" id="pAsse">Auto - Asse:</span>
+        <span class="pill" id="pAlpha">α LPF: —</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- PULSANTI DATI -->
+  <div class="btn-row2" id="dataRow" style="display:none">
+    <button class="btn btn-save" onclick="salva()">💾 Salva sessione</button>
+    <button class="btn btn-csv"  onclick="esportaCSV()">📤 Esporta CSV</button>
+  </div>
+
+</div>
+<div class="toast" id="toast"></div>
+
+
+<div id="editEsModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:2000;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;max-width:380px;width:100%;padding:18px;box-shadow:0 20px 60px rgba(0,0,0,.45);max-height:85vh;display:flex;flex-direction:column;gap:14px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <div style="font-size:15px;font-weight:700;color:var(--text);">Gestione esercizi</div>
+      <button type="button" id="editEsClose" style="border:none;background:transparent;color:var(--muted);font-size:20px;line-height:1;cursor:pointer;">×</button>
+    </div>
+
+    <!-- Lista esercizi correnti -->
+    <div id="esListContainer" style="overflow-y:auto;max-height:260px;display:flex;flex-direction:column;gap:6px;"></div>
+
+    <!-- Aggiungi nuovo -->
+    <div style="border-top:1px solid var(--border);padding-top:12px;">
+      <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;">Aggiungi esercizio</div>
+      <div style="display:flex;gap:8px;">
+        <input type="text" id="newEsNome" placeholder="Nome esercizio"
+               style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);
+                      color:var(--text);font-size:14px;padding:9px 11px;outline:none;font-family:var(--font-ui);">
+        <button type="button" id="addEsBtn"
+                style="border:none;background:var(--blue);color:#fff;border-radius:var(--r-sm);
+                       padding:9px 14px;font-weight:700;cursor:pointer;font-size:14px;white-space:nowrap;">+ Aggiungi</button>
+      </div>
+      <div id="addEsErr" style="font-size:11px;color:var(--red);margin-top:5px;display:none;"></div>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+      <button type="button" id="resetEsBtn"
+              style="border:1px solid var(--border);background:transparent;color:var(--muted);
+                     border-radius:var(--r-sm);padding:9px 12px;font-size:12px;cursor:pointer;">
+        Ripristina default
+      </button>
+      <button type="button" id="editEsOk"
+              style="border:none;background:var(--blue);color:#fff;border-radius:10px;
+                     padding:10px 16px;font-weight:600;cursor:pointer;">Chiudi</button>
+    </div>
+  </div>
+</div>
+
+<div id="helpMetricheModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:2000;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;max-width:420px;width:100%;padding:18px;box-shadow:0 20px 60px rgba(0,0,0,.45);max-height:85vh;overflow-y:auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;">
+      <div style="font-size:15px;font-weight:700;color:var(--text);">Come vengono calcolate le metriche</div>
+      <button type="button" id="helpMetricheClose" style="border:none;background:transparent;color:var(--muted);font-size:20px;line-height:1;cursor:pointer;">×</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px;font-size:13px;line-height:1.6;color:var(--text);">
+
+      <div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          <span style="font-size:16px;">⚡</span>
+          <span style="font-weight:700;color:var(--blue);">Velocità media (V.Media)</span>
+        </div>
+        <p style="margin:0;color:var(--muted);">Integrazione trapezoidale dell'accelerazione sull'asse verticale con il dt reale tra campioni. Si calcola solo sulla <b>finestra concentrica</b>: dal primo campione di accelerazione positiva fino all'indice del picco di velocità, escludendo la coda di decelerazione. Questo isola la fase di spinta effettiva ed evita di abbassare artificialmente il valore con i campioni finali lenti.</p>
+      </div>
+
+      <div style="height:1px;background:var(--border);"></div>
+
+      <div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          <span style="font-size:16px;">🚀</span>
+          <span style="font-weight:700;color:var(--green);">Velocità picco (V.Picco)</span>
+        </div>
+        <p style="margin:0;color:var(--muted);">Valore massimo dell'array di velocità calcolato durante la rep. La velocità è integrata campione per campione con formula trapezoidale (<code>v(n) = v(n-1) + (a(n-1)+a(n))/2 · dt</code>) e corretta da un filtro Zero-Velocity Update (ZVU) ogni volta che il segnale scende sotto la soglia di quiete, per limitare la deriva dell'integrazione. Un decadimento esponenziale (τ=1s) riduce ulteriormente l'accumulo di drift residuo durante la fase concentrica.</p>
+      </div>
+
+      <div style="height:1px;background:var(--border);"></div>
+
+      <div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          <span style="font-size:16px;">📉</span>
+          <span style="font-weight:700;color:var(--orange);">Velocity Loss (Loss %)</span>
+        </div>
+        <p style="margin:0;color:var(--muted);">Calo percentuale della V.Media rispetto alla prima rep della serie (<b>rep di riferimento</b>), che funge da baseline individuale. Formula: <code>Loss = (1 − V.Media(n) / V.Media(1)) × 100</code>. Un Loss &gt; 20% segnala accumulo di fatica neuromuscolare significativo e giustifica l'interruzione della serie per preservare la qualità del lavoro.</p>
+      </div>
+
+    </div>
+    <div style="margin-top:16px;display:flex;justify-content:flex-end;">
+      <button type="button" id="helpMetricheOk" style="border:none;background:var(--blue);color:#fff;border-radius:10px;padding:10px 14px;font-weight:600;cursor:pointer;">Chiudi</button>
+    </div>
+  </div>
+</div>
+
+<div id="helpAsseModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:2000;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;max-width:420px;width:100%;padding:18px;box-shadow:0 20px 60px rgba(0,0,0,.45);">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;">
+      <div style="font-size:15px;font-weight:700;color:var(--text);">Asse rilevamento</div>
+      <button type="button" id="helpAsseClose" style="border:none;background:transparent;color:var(--muted);font-size:20px;line-height:1;cursor:pointer;">×</button>
+    </div>
+    <div style="font-size:13px;line-height:1.6;color:var(--text);">
+      <p style="margin:0 0 10px 0;">Seleziona l'asse che meglio rappresenta la direzione verticale del movimento. In AUTO l'app rileva automaticamente l'orientamento del telefono durante la calibrazione e sceglie l'asse corretto.</p>
+      <ul style="margin:0;padding-left:18px;">
+        <li style="margin-bottom:8px;"><b>AUTO</b> — rileva l'asse dominante durante la calibrazione in base all'orientamento reale del telefono. Soluzione consigliata nella maggior parte dei casi.</li>
+        <li style="margin-bottom:8px;"><b>Y</b> — asse lungo il bordo verticale del telefono (dal basso verso l'alto in portrait). È l'asse corretto quando il telefono è tenuto in verticale con il display rivolto verso l'utente o verso il bilanciere. Caso più comune: tasca verticale dei pantaloni, impugnatura portrait.</li>
+        <li style="margin-bottom:8px;"><b>X</b> — asse che esce dal bordo corto del telefono (destra/sinistra in portrait). Diventa verticale — e quindi utile per misurare sollevamenti — quando il telefono è appoggiato su un fianco (landscape con il bordo laterale verso il basso).</li>
+        <li><b>Z</b> — asse perpendicolare allo schermo (fuoriesce dal display verso l'utente). È verticale quando il telefono è piatto orizzontale, con lo schermo rivolto verso il soffitto o verso il pavimento. Tipico su un supporto orizzontale o in tasca piatta.</li>
+      </ul>
+      <p style="margin:10px 0 0 0;color:var(--muted);">Esempi pratici: tasca verticale dei pantaloni → Y; telefono su un supporto orizzontale (schermo verso l'alto) → Z; telefono appoggiato su un fianco in landscape → X.</p>
+    </div>
+    <div style="margin-top:16px;display:flex;justify-content:flex-end;">
+      <button type="button" id="helpAsseOk" style="border:none;background:var(--blue);color:#fff;border-radius:10px;padding:10px 14px;font-weight:600;cursor:pointer;">Chiudi</button>
+    </div>
+  </div>
+</div>
+
+<div id="helpSoglieModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:2000;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;max-width:420px;width:100%;padding:18px;box-shadow:0 20px 60px rgba(0,0,0,.45);">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;">
+      <div style="font-size:15px;font-weight:700;color:var(--text);">Ruolo delle soglie</div>
+      <button type="button" id="helpSoglieClose" style="border:none;background:transparent;color:var(--muted);font-size:20px;line-height:1;cursor:pointer;">×</button>
+    </div>
+    <div style="font-size:13px;line-height:1.6;color:var(--text);">
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
+            <span style="font-size:16px;">⚡</span>
+            <span style="font-weight:700;">Soglia di attivazione (m/s²)</span>
+          </div>
+          <p style="margin:0;color:var(--muted);">Evita falsi avvii dovuti a rumore, micro-movimenti o vibrazioni del sensore. La rep parte solo quando il segnale supera questo livello per più campioni consecutivi.</p>
+        </div>
+        <div style="height:1px;background:var(--border);"></div>
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
+            <span style="font-size:16px;">🔴</span>
+            <span style="font-weight:700;">Soglia minima (m/s)</span>
+          </div>
+          <p style="margin:0;color:var(--muted);">Limite sotto il quale la rep è considerata troppo lenta o fuori target. Attiva il feedback sonoro e visivo di avviso per segnalare che la velocità è insufficiente.</p>
+        </div>
+        <div style="height:1px;background:var(--border);"></div>
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
+            <span style="font-size:16px;">✅</span>
+            <span style="font-weight:700;">Soglia target (m/s)</span>
+          </div>
+          <p style="margin:0;color:var(--muted);">Riferimento per la zona desiderata. Indica che hai raggiunto o superato la velocità prevista per quella serie e quel carico, confermando che la rep è nella fascia di allenamento ottimale.</p>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:16px;display:flex;justify-content:flex-end;">
+      <button type="button" id="helpSoglieOk" style="border:none;background:var(--blue);color:#fff;border-radius:10px;padding:10px 14px;font-weight:600;cursor:pointer;">Chiudi</button>
+    </div>
+  </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded',()=>{const b=document.getElementById('helpAsseBtn'),m=document.getElementById('helpAsseModal'),c=()=>{if(m)m.style.display='none'},o=()=>{if(m)m.style.display='flex'};if(b)b.addEventListener('click',o);['helpAsseClose','helpAsseOk'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('click',c)});if(m)m.addEventListener('click',e=>{if(e.target===m)c()});document.addEventListener('keydown',e=>{if(e.key==='Escape')c()});
+  /* ── helper Metriche ── */
+  const bM=document.getElementById('helpMetricheBtn'),mM=document.getElementById('helpMetricheModal');
+  const cM=()=>{if(mM)mM.style.display='none'};
+  const oM=()=>{if(mM)mM.style.display='flex'};
+  if(bM)bM.addEventListener('click',oM);
+  ['helpMetricheClose','helpMetricheOk'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('click',cM)});
+  if(mM)mM.addEventListener('click',e=>{if(e.target===mM)cM()});
+  /* ── helper Soglie ── */
+  const bS=document.getElementById('helpSoglieBtn'),mS=document.getElementById('helpSoglieModal');
+  const cS=()=>{if(mS)mS.style.display='none'};
+  const oS=()=>{if(mS)mS.style.display='flex'};
+  if(bS)bS.addEventListener('click',oS);
+  ['helpSoglieClose','helpSoglieOk'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('click',cS)});
+  if(mS)mS.addEventListener('click',e=>{if(e.target===mS)cS()});
+
+  /* ── init UI ── */
+  setAsse('auto');
+  build1RMCombo();
+  buildEsCombo('squat');
+  aggiornaSoglie();
+
+  /* ── Gestione esercizi ── */
+  const mEdit   = document.getElementById('editEsModal');
+  const closeEdit = () => { if(mEdit) mEdit.style.display='none'; };
+  const openEdit  = () => {
+    renderEsList();
+    document.getElementById('newEsNome').value = '';
+    document.getElementById('addEsErr').style.display = 'none';
+    if(mEdit) mEdit.style.display='flex';
+  };
+  document.getElementById('editEsBtn')?.addEventListener('click', openEdit);
+  ['editEsClose','editEsOk'].forEach(id => {
+    document.getElementById(id)?.addEventListener('click', closeEdit);
+  });
+  if(mEdit) mEdit.addEventListener('click', e => { if(e.target===mEdit) closeEdit(); });
+
+  document.getElementById('addEsBtn')?.addEventListener('click', () => {
+    const inp  = document.getElementById('newEsNome');
+    const err  = document.getElementById('addEsErr');
+    const nome = inp.value.trim();
+    const key  = slugEs(nome);
+    err.style.display = 'none';
+    if (!nome) { err.textContent='Inserisci un nome.'; err.style.display='block'; return; }
+    if (!key)  { err.textContent='Nome non valido.'; err.style.display='block'; return; }
+    const list = leggiEsercizi();
+    if (list.some(e => e.key===key || e.nome.toLowerCase()===nome.toLowerCase())) {
+      err.textContent='Esercizio già presente.'; err.style.display='block'; return;
+    }
+    list.push({key, nome});
+    salvaEsercizi(list);
+    inp.value = '';
+    renderEsList();
+    buildEsCombo(key);
+  });
+  document.getElementById('newEsNome')?.addEventListener('keydown', e => {
+    if(e.key==='Enter') document.getElementById('addEsBtn')?.click();
+  });
+  document.getElementById('resetEsBtn')?.addEventListener('click', () => {
+    salvaEsercizi(ES_DEFAULT.map(e=>({...e})));
+    renderEsList();
+    buildEsCombo('squat');
+  });
+});
+
+/* ═══════════════════════════════════════════════
+   STATO
+═══════════════════════════════════════════════ */
+const S = {
+  // sensore
+  sensorOk: false,
+  rawX: 0, rawY: 0, rawZ: 0,
+  // calibrazione
+  calibrato: false,
+  offX: 0, offY: 0, offZ: 0,
+  // asse selezionato: 'auto'|'x'|'y'|'z'
+  asse: 'auto',
+  // FIX BUG 5: asse fissato in calibrazione (non ricalcolato ogni campione)
+  asseAuto: 'z',
+  // serie
+  attiva: false,
+  inRep: false,
+  // campioni correnti
+  camp: [], vel: [],
+  // metriche
+  repN: 0,
+  vMedia: 0, vPicco: 0,
+  vRef: 0,   // prima rep
+  vLoss: 0,
+  // log
+  repLog: [],
+  storico: [],
+  // soglie
+  sogAtt: 0.8,
+  sogMin: 0.30,
+  sogTgt: 0.55,
+  // timing
+  lastT: 0,
+  hzReal: 0,
+  hzCont: 0,
+  hzT: 0,
+  // FIX BUG 3: traccia picco velocità durante rep per criterio di fine-rep
+  vPiccoInRep: 0,
+  // FIX BUG 1+7: flag se stiamo usando e.acceleration (pura) o con gravità
+  useAccPura: false,
+  // V4.2 — percentuale 1RM e rep correnti (letti in leggiSoglie)
+  pct1RM: 75,
+  repRef: 1,
+  // V4.2 — esito ultima verifica coerenza velocità vs curva %1RM
+  _ultimaCoerenza: null,
+  // V4.3 — parametri Vbt Training-compatibili per rep corrente
+  romCm: 0,        // ROM integrata (cm)
+  durMs: 0,        // Durata rep (ms)
+  tPiccoMs: 0,     // Time-to-peak-velocity (ms)
+  meanPowerW: 0,   // Potenza media (W)
+  accelIdx: 0,     // Indice di accelerazione (m/s²)
+  stima1RM: 0,     // Stima 1RM (kg) con metodo Jidovtseff-VBT
+  // V4.3 — array dt campioni per calcoli temporali
+  campDt: [],
+  repStartT: 0,    // performance.now() inizio rep
+  lastRepEndT: null, // performance.now() fine ultima rep (per periodo refrattario)
+};
+
+/* ═══════════════════════════════════════════════
+   AUDIO
+═══════════════════════════════════════════════ */
+let actx = null;
+function initAudio() {
+  if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+  if (actx.state === 'suspended') actx.resume();
+}
+function beep(f=880, ms=180, v=0.55) {
+  try {
+    initAudio();
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.connect(g); g.connect(actx.destination);
+    o.type = 'sine'; o.frequency.value = f;
+    const t = actx.currentTime;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(v, t + 0.010);
+    g.gain.exponentialRampToValueAtTime(0.001, t + ms/1000);
+    o.start(t); o.stop(t + ms/1000 + 0.05);
+  } catch(e){}
+}
+function beepDoppio() { beep(880,160,.7); setTimeout(()=>beep(660,200,.8), 230); }
+function vibra(ms=400){ try{ navigator.vibrate && navigator.vibrate(ms); }catch(e){} }
+
+/* ═══════════════════════════════════════════════
+   TOAST
+═══════════════════════════════════════════════ */
+let _toastT;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_toastT);
+  _toastT = setTimeout(()=>el.classList.remove('show'), 2800);
+}
+
+/* ═══════════════════════════════════════════════
+   UI UTILITY
+═══════════════════════════════════════════════ */
+function tog(bodyId, arrId) {
+  document.getElementById(bodyId).classList.toggle('open');
+  document.getElementById(arrId).classList.toggle('open');
+}
+function mostraUI() {
+  ['configCard','liveCard','storicoCard','diagCard','dataRow']
+    .forEach(id => document.getElementById(id).style.display = '');
+  document.getElementById('liveCard').style.display = 'block';
+  document.getElementById('storicoCard').style.display = 'block';
+  document.getElementById('diagCard').style.display = 'block';
+  document.getElementById('dataRow').style.display = 'grid';
+}
+
+/* ═══════════════════════════════════════════════
+   SOGLIE AUTO PER ESERCIZIO / 1RM
+═══════════════════════════════════════════════ */
+const SOGLIE = {
+  squat:    {min:.30,tgt:.55},
+  bench:    {min:.20,tgt:.45},
+  deadlift: {min:.15,tgt:.40},
+  pclean:   {min:.80,tgt:1.20},
+  hipthrust:{min:.30,tgt:.60},
+  ohp:      {min:.20,tgt:.40},
+};
+const VBT_1RM = [
+  {pct:90, maxReps:2, reps:[0.49,0.52,null,null,null,null]},
+  {pct:87, maxReps:4, reps:[0.54,0.52,0.52,0.50,null,null]},
+  {pct:84, maxReps:5, reps:[0.57,0.57,0.56,0.56,0.54,null]},
+  {pct:81, maxReps:6, reps:[0.63,0.61,0.61,0.60,0.60,0.58]},
+  {pct:78, maxReps:6, reps:[0.67,0.66,0.65,0.65,0.64,0.64]},
+  {pct:75, maxReps:6, reps:[0.73,0.70,0.70,0.69,0.69,0.68]},
+  {pct:72, maxReps:6, reps:[0.76,0.75,0.74,0.74,0.73,0.73]},
+  {pct:69, maxReps:6, reps:[0.80,0.79,0.79,0.78,0.78,0.77]},
+  {pct:66, maxReps:6, reps:[0.85,0.83,0.83,0.83,0.82,0.82]},
+  {pct:64, maxReps:6, reps:[0.89,0.88,0.87,0.87,0.87,0.86]},
+  {pct:61, maxReps:6, reps:[0.93,0.92,0.92,0.91,0.91,0.91]},
+  {pct:58, maxReps:6, reps:[0.98,0.97,0.96,0.96,0.95,0.95]},
+  {pct:55, maxReps:6, reps:[1.03,1.01,1.01,1.00,1.00,0.99]},
+  {pct:52, maxReps:6, reps:[1.07,1.06,1.05,1.05,1.04,1.04]},
+  {pct:49, maxReps:6, reps:[1.11,1.10,1.10,1.09,1.09,1.08]},
+  {pct:46, maxReps:6, reps:[1.16,1.14,1.14,1.14,1.13,1.13]},
+  {pct:43, maxReps:6, reps:[1.20,1.19,1.18,1.18,1.18,1.17]},
+];
+function getVBTTarget(pct, reps=1) {
+  const row = VBT_1RM.find(r => r.pct === pct);
+  if (!row) return null;
+  const idx = Math.max(1, Math.min(6, reps)) - 1;
+  const candidates = [row.reps[idx], ...row.reps.filter(v => v != null)];
+  return candidates.find(v => v != null) ?? null;
+}
+/* ═══════════════════════════════════════════════
+   V4.2 — CAP ADATTIVO E VALIDAZIONE COERENZA
+   Correggono l'incongruenza "90% 1RM → 1.12 m/s":
+   • getVCapByPct: hard-cap fisico scalato sul carico
+   • validaCoerenza: verifica che il risultato stia
+     nel range atteso dalla curva forza-velocità
+═══════════════════════════════════════════════ */
+
+/* Massima velocità fisicamente plausibile scalata sul %1RM.
+   Formula: max(reps_table[pct]) × 1.40  (con hard-cap 2.0 m/s).
+   Es. 90% 1RM → max_expected=0.52 → V_CAP=0.73 m/s.
+   Impedisce al drift di integrazione di restituire 1.12 m/s a 90% 1RM. */
+function getVCapByPct(pct) {
+  const entry = VBT_1RM.find(r => r.pct === pct)
+    || [...VBT_1RM].sort((a,b) => Math.abs(a.pct - pct) - Math.abs(b.pct - pct))[0];
+  if (!entry) return 2.0;
+  const maxV = Math.max(...entry.reps.filter(v => v != null));
+  return Math.min(maxV * 1.40, 2.0);
+}
+
+/* Controlla la coerenza della velocità misurata rispetto al profilo
+   forza-velocità atteso per la percentuale di 1RM selezionata.
+   Tolleranza ±35%: la curva ha variabilità inter-individuale reale.
+   Ritorna { ok, troppoAlto, troppoBasso, expected, maxP, minP, label }. */
+function validaCoerenza(vMedia, pct1RM, repN) {
+  const entry = VBT_1RM.find(r => r.pct === pct1RM)
+    || [...VBT_1RM].sort((a,b) => Math.abs(a.pct - pct1RM) - Math.abs(b.pct - pct1RM))[0];
+  if (!entry) return { ok: true };
+  const idx      = Math.max(0, Math.min(5, (repN || 1) - 1));
+  const expected = entry.reps[idx] != null ? entry.reps[idx]
+                 : entry.reps.find(v => v != null);
+  if (!expected) return { ok: true };
+  const tol         = 0.35;
+  const maxP        = +(expected * (1 + tol)).toFixed(2);
+  const minP        = +(expected * (1 - tol)).toFixed(2);
+  const troppoAlto  = vMedia > maxP;
+  const troppoBasso = vMedia < minP;
+  return {
+    ok: !troppoAlto && !troppoBasso,
+    troppoAlto,
+    troppoBasso,
+    expected: +expected.toFixed(2),
+    maxP,
+    minP,
+    label: troppoAlto
+      ? `🚨 Vel. anomala — sopra atteso per ${pct1RM}% 1RM (max ${maxP} m/s)`
+      : troppoBasso
+      ? `⚠️ Vel. bassa — sotto atteso per ${pct1RM}% 1RM (min ${minP} m/s)`
+      : `✅ Coerente con ${pct1RM}% 1RM`
+  };
+}
+
+/* ═══════════════════════════════════════════════
+   V4.3 — GESTIONE ESERCIZI DINAMICA
+   Esercizi salvati in localStorage → 'vbt_esercizi'
+   Struttura: [{key, nome}]  (key = slug univoco)
+═══════════════════════════════════════════════ */
+const ES_DEFAULT = [
+  {key:'squat',     nome:'Squat'},
+  {key:'bench',     nome:'Bench Press'},
+  {key:'deadlift',  nome:'Deadlift'},
+  {key:'pclean',    nome:'Power Clean'},
+  {key:'hipthrust', nome:'Hip Thrust'},
+  {key:'ohp',       nome:'Overhead Press'},
+];
+
+function slugEs(nome) {
+  return nome.toLowerCase().trim()
+    .replace(/\s+/g,'-').replace(/[^a-z0-9\-]/g,'');
+}
+
+function leggiEsercizi() {
+  try {
+    const raw = localStorage.getItem('vbt_esercizi');
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  return ES_DEFAULT.map(e => ({...e}));
+}
+
+function salvaEsercizi(list) {
+  try { localStorage.setItem('vbt_esercizi', JSON.stringify(list)); } catch(e) {}
+}
+
+function build1RMCombo() {
+  const sel = document.getElementById('sel1RM');
+  if (!sel) return;
+  sel.innerHTML = VBT_1RM.map(r => `<option value="${r.pct}">${r.pct}% 1RM</option>`).join('');
+  sel.value = '75';
+}
+
+function buildEsCombo(seleziona) {
+  const sel  = document.getElementById('selEs');
+  if (!sel) return;
+  const list = leggiEsercizi();
+  const cur  = seleziona || sel.value || (list[0]?.key ?? '');
+  sel.innerHTML = list.map(e =>
+    `<option value="${e.key}"${e.key===cur?' selected':''}>${e.nome}</option>`
+  ).join('');
+  aggiornaSoglie();
+}
+
+function renderEsList() {
+  const list = leggiEsercizi();
+  const container = document.getElementById('esListContainer');
+  if (!container) return;
+  if (!list.length) {
+    container.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:12px;">Nessun esercizio</div>';
+    return;
+  }
+  container.innerHTML = list.map((e, i) =>
+    `<div style="display:flex;align-items:center;gap:8px;background:var(--surface);
+                 border-radius:var(--r-sm);padding:8px 10px;border:1px solid var(--border);">
+       <span style="flex:1;font-size:13px;color:var(--text);">${e.nome}</span>
+       ${i >= ES_DEFAULT.length
+         ? `<button type="button" onclick="eliminaEs('${e.key}')"
+                    style="border:none;background:transparent;color:var(--muted);
+                           font-size:16px;cursor:pointer;line-height:1;padding:0 2px;"
+                    title="Elimina">🗑</button>`
+         : `<span style="font-size:10px;color:var(--muted);letter-spacing:.5px;">DEFAULT</span>`
+       }
+     </div>`
+  ).join('');
+}
+
+function eliminaEs(key) {
+  let list = leggiEsercizi().filter(e => e.key !== key);
+  if (!list.length) list = ES_DEFAULT.map(e=>({...e}));
+  salvaEsercizi(list);
+  renderEsList();
+  buildEsCombo();
+}
+
+/* Aggiorna il campo rep e le soglie in base alla % selezionata.
+   Se l'utente ha già modificato il campo, usa il valore inserito. */
+function aggiornaSoglie1RM() {
+  const pct = parseInt(document.getElementById('sel1RM').value || '75', 10);
+  const row = VBT_1RM.find(r => r.pct === pct);
+  if (!row) return;
+
+  const repEl = document.getElementById('inRepRange');
+
+  /* Popola con il max della tabella solo se il cambio viene dal selettore %
+     (il campo è vuoto o il valore attuale supera il maxReps della nuova riga) */
+  const curRep = parseInt(repEl.value, 10);
+  if (!curRep || curRep > row.maxReps) {
+    repEl.value = row.maxReps;
+  }
+
+  const reps = Math.max(1, Math.min(row.maxReps, parseInt(repEl.value, 10) || row.maxReps));
+  const tgt  = getVBTTarget(pct, reps);
+  if (tgt == null) return;
+  const min  = Math.max(0.05, tgt - 0.10);
+  document.getElementById('inSMin').value = min.toFixed(2);
+  document.getElementById('inSTgt').value = tgt.toFixed(2);
+}
+
+function aggiornaSoglie() {
+  const k = document.getElementById('selEs').value;
+  const s = SOGLIE[k] || {min:.30,tgt:.55};
+  document.getElementById('inSMin').value = s.min.toFixed(2);
+  document.getElementById('inSTgt').value = s.tgt.toFixed(2);
+  aggiornaSoglie1RM();
+}
+/* ═══════════════════════════════════════════════
+   SELEZIONE ASSE
+═══════════════════════════════════════════════ */
+function setAsse(a) {
+  S.asse = a;
+  document.querySelectorAll('.asse-btn').forEach(el => {
+    el.classList.toggle('sel', el.dataset.asse === a);
+  });
+  document.getElementById('pAsse').textContent = 'asse: ' + a.toUpperCase();
+  document.getElementById('dAsseAtt').textContent = a.toUpperCase();
+}
+
+/* ═══════════════════════════════════════════════
+   ATTIVA SENSORE — gestisce sia iOS che Android
+═══════════════════════════════════════════════ */
+function attivaPermesso() {
+  // Inizializza AudioContext sul gesto utente (richiesto da browser)
+  initAudio();
+
+  if (typeof DeviceMotionEvent !== 'undefined' &&
+      typeof DeviceMotionEvent.requestPermission === 'function') {
+    // iOS 13+
+    DeviceMotionEvent.requestPermission().then(r => {
+      if (r === 'granted') {
+        registraSensore();
+      } else {
+        mostraBannerErr('Permesso negato. Vai in Impostazioni > Safari > Sensori di movimento.');
+      }
+    }).catch(e => {
+      mostraBannerErr('Errore: ' + e.message);
+    });
+  } else if (typeof DeviceMotionEvent !== 'undefined') {
+    // Android Chrome — nessun permesso necessario
+    registraSensore();
+  } else {
+    mostraBannerErr('Sensore non disponibile su questo dispositivo o browser.');
+  }
+}
+
+function registraSensore() {
+  window.addEventListener('devicemotion', onMotion, true);
+  // Verifica che arrivi davvero qualcosa entro 1 secondo
+  setTimeout(() => {
+    if (!S.sensorOk) {
+      mostraBannerErr('Sensore non risponde. Prova a ricaricare la pagina in Chrome su Android o Safari su iOS.');
+    }
+  }, 1500);
+}
+
+function onMotion(e) {
+  const a = e.accelerationIncludingGravity;
+  if (!a) return;
+
+  // Primo evento → sensore OK
+  if (!S.sensorOk) {
+    S.sensorOk = true;
+    document.getElementById('sensorBanner').style.display = 'none';
+    document.getElementById('configCard').style.display   = 'block';
+    mostraUI();
+    toast('✅ Sensore attivo!');
+    document.getElementById('pCal').textContent = 'sensore OK';
+    document.getElementById('pCal').className   = 'pill ok';
+  }
+
+  S.rawX = a.x ?? 0;
+  S.rawY = a.y ?? 0;
+  S.rawZ = a.z ?? 0;
+
+  // Calcolo Hz reale
+  const now = performance.now();
+  if (S.hzT === 0) S.hzT = now;
+  S.hzCont++;
+  if (now - S.hzT >= 1000) {
+    S.hzReal = S.hzCont;
+    S.hzCont = 0;
+    S.hzT = now;
+    document.getElementById('dHz').textContent = S.hzReal + ' Hz';
+  }
+
+  // Aggiorna diagnostica raw (throttled ogni 5 eventi)
+  if (!onMotion._c) onMotion._c = 0;
+  if (++onMotion._c % 5 === 0) {
+    document.getElementById('dX').textContent = S.rawX.toFixed(3);
+    document.getElementById('dY').textContent = S.rawY.toFixed(3);
+    document.getElementById('dZ').textContent = S.rawZ.toFixed(3);
+  }
+}
+
+function mostraBannerErr(msg) {
+  const b = document.getElementById('sensorBanner');
+  b.className = 'sensor-banner err';
+  b.innerHTML = `<p>${msg}</p>`;
+}
+
+/* ═══════════════════════════════════════════════
+   CALIBRAZIONE
+   Media su 80 campioni (~1.6s a 50Hz) per maggiore stabilità
+═══════════════════════════════════════════════ */
+/* variabili di stato calibrazione (scope modulo, non annidato) */
+let _calCampX = [], _calCampY = [], _calCampZ = [];
+let _calGravX = [], _calGravY = [], _calGravZ = [];
+let _calDone  = false;
+let _calTimer = null;
+
+/* ── DeviceOrientationEvent — rilevamento asse primario ─────────────────
+   beta  (-180…180): inclinazione avanti/indietro.  0=piatto, ±90=verticale
+   gamma  (-90…90):  inclinazione sinistra/destra.  0=piatto, ±90=su un fianco
+   Questa API legge direttamente la gravità dal sensore di orientamento
+   (gyroscopio + accel fused) ed è affidabile anche quando il browser
+   restituisce e.acceleration e e.accelerationIncludingGravity identici.
+   Mapping asse verticale (direzione del movimento in palestra):
+     |gamma| > 45  → asse X  (telefono su fianco)
+     |beta|  > 45  → asse Y  (telefono verticale, ritratto)
+     entrambi < 45 → asse Z  (telefono piano)
+──────────────────────────────────────────────────────────────────────── */
+let _calOriBeta  = [];
+let _calOriGamma = [];
+function _oriHandler(e) {
+  if (e.beta  !== null && e.beta  !== undefined &&
+      e.gamma !== null && e.gamma !== undefined) {
+    _calOriBeta.push(e.beta);
+    _calOriGamma.push(e.gamma);
+  }
+}
+
+function _calHandler(ev) {
+  if (_calDone) return;
+
+  // Legge SEMPRE accelerationIncludingGravity come fonte primaria:
+  // è l'unica garantita su tutti i device Android/iOS.
+  // e.acceleration può essere null, undefined, o un oggetto con valori null.
+  const aConG = ev.accelerationIncludingGravity;
+  const aPura = ev.acceleration;
+
+  let x, y, z;
+
+  /* NULL-CHECK (non typeof+isFinite): su molti Android e alcuni iOS le proprietà
+     dell'evento passano il check di esistenza ma non typeof==='number' o isFinite,
+     causando lo scarto di tutti i campioni e l'errore "nessun dato" dopo 6s.
+     L'operatore unario + converte qualsiasi valore numerico-compatibile in Number. */
+  const puraOk = aPura != null &&
+                 aPura.x != null && aPura.y != null && aPura.z != null;
+
+  if (puraOk) {
+    x = +aPura.x || 0; y = +aPura.y || 0; z = +aPura.z || 0;
+    S.useAccPura = true;
+  } else if (aConG != null) {
+    x = +aConG.x || 0; y = +aConG.y || 0; z = +aConG.z || 0;
+    S.useAccPura = false;
+  } else {
+    return; // evento privo di dati
+  }
+
+  _calCampX.push(x);
+  _calCampY.push(y);
+  _calCampZ.push(z);
+
+  /* FIX v4.1: raccogli SEMPRE accelerationIncludingGravity in array separati
+     per il rilevamento dell'asse dominante (= asse in cui la gravità è più alta).
+     Questo è indipendente da useAccPura: anche se usiamo aPura per gli offset,
+     la gravità è visibile solo in aConG e serve per capire come è orientato il telefono. */
+  if (aConG && aConG.x != null && aConG.y != null && aConG.z != null) {
+    _calGravX.push(+aConG.x || 0);
+    _calGravY.push(+aConG.y || 0);
+    _calGravZ.push(+aConG.z || 0);
+  }
+
+  // Completa subito appena raggiunti 60 campioni (≈ 1.2s a 50Hz)
+  if (_calCampX.length >= 60) {
+    _completaCalibrazione();
+  }
+}
+
+function _completaCalibrazione() {
+  if (_calDone) return;
+  _calDone = true;
+
+  clearTimeout(_calTimer);
+  window.removeEventListener('devicemotion',      _calHandler, true);
+  window.removeEventListener('deviceorientation', _oriHandler, true);
+
+  const n = _calCampX.length;
+
+  // Con qualsiasi numero di campioni > 0 procediamo (anche 5 bastano
+  // per una media stabile su un sensore fermo).
+  // Solo se 0 campioni → errore reale (sensore non risponde affatto).
+  if (n === 0) {
+    document.getElementById('pCal').textContent = 'errore: nessun dato';
+    document.getElementById('pCal').className   = 'pill err';
+    toast('❌ Sensore non risponde. Riprova o cambia browser.');
+    return;
+  }
+
+  // Calcola offset (medie)
+  const media = (arr) => arr.reduce((a,b)=>a+b,0) / arr.length;
+  S.offX = media(_calCampX);
+  S.offY = media(_calCampY);
+  S.offZ = media(_calCampZ);
+
+  // Se acc pura: gli offset sono rumore residuo attorno a 0, azzerarli
+  if (S.useAccPura) { S.offX = 0; S.offY = 0; S.offZ = 0; }
+
+  S.calibrato = true;
+
+  /* ── Rilevamento asse dominante ─────────────────────────────────────
+     METODO 1 (primario): DeviceOrientationEvent — beta e gamma
+       beta  ≈ 0      e gamma ≈ 0      → telefono piano     → Z
+       |beta| > 45    e |gamma| < 45   → telefono verticale → Y
+       |gamma| > 45                    → telefono su fianco → X
+     Funziona su qualsiasi device perché usa il sensore di orientamento
+     (gyro+accel fused), non dipende da come il browser espone la gravità.
+
+     METODO 2 (fallback): accelerationIncludingGravity
+       Se l'orientamento non è disponibile, usa la magnitudine della
+       gravità sull'asse dominante come secondo tentativo.
+  ─────────────────────────────────────────────────────────────────── */
+  // 'media' è già definita sopra per calcolare gli offset
+
+  let asseRilevato;
+  let metodo;
+
+  // — Metodo 1: orientation angles —
+  if (_calOriBeta.length >= 3 && _calOriGamma.length >= 3) {
+    const avgBeta  = media(_calOriBeta);
+    const avgGamma = media(_calOriGamma);
+    const absBeta  = Math.abs(avgBeta);
+    const absGamma = Math.abs(avgGamma);
+
+    if (absGamma > 45) {
+      asseRilevato = 'x';                         // su fianco
+    } else if (absBeta > 45) {
+      asseRilevato = 'y';                         // verticale portrait
+    } else {
+      asseRilevato = 'z';                         // piano
+    }
+    metodo = 'ori';
+
+  // — Metodo 2: gravity da accelerometro —
+  } else {
+    const mediaG = (arr) => arr.length > 0 ? arr.reduce((a,b) => a+b, 0) / arr.length : 0;
+    let gx = _calGravX.length > 0 ? Math.abs(mediaG(_calGravX)) : Math.abs(S.offX);
+    let gy = _calGravX.length > 0 ? Math.abs(mediaG(_calGravY)) : Math.abs(S.offY);
+    let gz = _calGravX.length > 0 ? Math.abs(mediaG(_calGravZ)) : Math.abs(S.offZ);
+    const totalG = Math.sqrt(gx*gx + gy*gy + gz*gz);
+
+    if (totalG > 5.0) {
+      if      (gx > gy && gx > gz) asseRilevato = 'x';
+      else if (gz > gx && gz > gy) asseRilevato = 'z';
+      else                          asseRilevato = 'y';
+      metodo = 'grav';
+    } else {
+      asseRilevato = null;   // rilevamento fallito
+      metodo = 'none';
+    }
+  }
+
+  // Salva sempre l'asse appena rilevato; il confronto manuale usa questo valore freschissimo.
+  S.asseAuto = asseRilevato || 'z';
+
+  const modoStr = S.useAccPura ? 'acc.pura' : 'acc+g';
+  const asseEff = S.asseAuto.toUpperCase();
+  const rilevato = asseRilevato !== null;
+  const asseSelezionato = S.asse;
+
+  // ── Toast: solo l'asse rilevato, nessun numero grezzo ──
+  if (asseSelezionato !== 'auto') {
+    if (asseSelezionato.toLowerCase() === asseEff.toLowerCase()) {
+      toast(`✅ Calibrato · Asse: ${asseEff}`);
+      parla(`Dispositivo calibrato · Asse: ${asseEff}`);
+    } else {
+      toast(`🔴 Asse selezionato ${asseSelezionato.toUpperCase()} non coerente con l'asse rilevato (${asseEff})`);
+      beepDoppio();
+      parla(`Asse selezionato ${asseSelezionato.toUpperCase()} non coerente con l'asse rilevato (${asseEff})`);
+    }
+  } else if (rilevato) {
+    toast(`✅ Calibrato · AUTO Asse: ${asseEff}`);
+    parla(`Dispositivo calibrato · Asse: ${asseEff}`);
+  } else {
+    toast(`✅ Calibrato · Asse non rilevato — seleziona manualmente`);
+  }
+
+  // ── Pill pCal (sotto il bottone Calibra) ──
+  document.getElementById('pCal').textContent = asseSelezionato === 'auto'
+    ? (rilevato ? `${modoStr} · Auto - Asse: ${asseEff}` : `${modoStr} · ⚠️ scegli asse`)
+    : (asseSelezionato.toLowerCase() === asseEff.toLowerCase() ? `${modoStr} · asse ${asseEff}` : `${modoStr} · asse ${asseSelezionato.toUpperCase()} non coerente`);
+  document.getElementById('pCal').className = (asseSelezionato === 'auto' ? ((!rilevato) ? 'pill warn' : 'pill ok') : (asseSelezionato.toLowerCase() === asseEff.toLowerCase() ? 'pill ok' : 'pill warn'));
+
+  // ── Pill pAsse in diagnostica ──
+  const pAsseEl = document.getElementById('pAsse');
+  if (pAsseEl) {
+    pAsseEl.textContent = asseSelezionato === 'auto'
+      ? (rilevato ? `Auto - Asse: ${asseEff}` : 'Auto - Asse: ⚠️')
+      : `asse: ${asseSelezionato.toUpperCase()}`;
+  }
+  document.getElementById('btnGo').disabled   = false;
+  beep(660, 200, .5);
+}
+
+function calibra() {
+  if (!S.sensorOk) { toast('⚠️ Prima attiva il sensore'); return; }
+
+  // Pulisci timer e listener da eventuali tentativi precedenti
+  clearTimeout(_calTimer);
+  window.removeEventListener('devicemotion',      _calHandler, true);
+  window.removeEventListener('deviceorientation', _oriHandler, true);
+
+  initAudio();
+
+  // Reset tutti gli array di calibrazione
+  _calCampX = []; _calCampY = []; _calCampZ = [];
+  _calGravX = []; _calGravY = []; _calGravZ = [];
+  _calOriBeta = []; _calOriGamma = [];
+  _calDone  = false;
+  S.useAccPura = false;
+  S.calibrato  = false;
+  document.getElementById('btnGo').disabled = true;
+  document.getElementById('pCal').textContent = 'calibrazione…';
+  document.getElementById('pCal').className   = 'pill warn';
+  toast('⏳ Calibrazione… tieni fermo il dispositivo');
+
+  window.addEventListener('devicemotion',      _calHandler, true);
+  window.addEventListener('deviceorientation', _oriHandler, true);  // per rilevamento asse
+
+  _calTimer = setTimeout(_completaCalibrazione, 6000);
+}
+
+/* ═══════════════════════════════════════════════
+   LEGGE VALORE DELL'ASSE GIUSTO (netto)
+═══════════════════════════════════════════════ */
+function getAzNetto() {
+  // FIX BUG 5: in modalità AUTO usa l'asse fissato in calibrazione
+  // FIX BUG 1+7: se useAccPura, l'offset è già 0 (nessuna gravità da rimuovere)
+  const asseEff = (S.asse === 'auto') ? S.asseAuto : S.asse;
+  const offX = S.useAccPura ? 0 : S.offX;
+  const offY = S.useAccPura ? 0 : S.offY;
+  const offZ = S.useAccPura ? 0 : S.offZ;
+  if (asseEff === 'x') return S.rawX - offX;
+  if (asseEff === 'y') return S.rawY - offY;
+  return S.rawZ - offZ;
+}
+
+/* ═══════════════════════════════════════════════
+   AVVIA / FERMA SERIE
+═══════════════════════════════════════════════ */
+function avvia() {
+  if (!S.calibrato) { toast('⚠️ Prima calibra'); return; }
+  leggiSoglie();
+  initAudio();
+
+  S.attiva = true;
+  S.inRep  = false;
+  S.repN   = 0;
+  S.vRef   = 0;
+  S.vLoss  = 0;
+  S.camp   = [];
+  S.vel    = [];
+  S.campDt = [];    // V4.3
+  S.repLog = [];
+  S.storico= [];
+  S.lastT  = performance.now();
+  S.vPiccoInRep = 0;
+  S.lastRepEndT = null;  // V4.3: reset periodo refrattario
+  // V4.3: reset metriche Vbt Training
+  S.romCm = 0; S.durMs = 0; S.tPiccoMs = 0;
+  S.meanPowerW = 0; S.accelIdx = 0; S.stima1RM = 0;
+  _azLPF = 0;   // V4.2: reset filtro IIR all'avvio serie
+  // Reset contatori interni tick
+  tickAlgoritmo._preRep     = 0;
+  tickAlgoritmo._preRepHigh = 0;  // V4.5: reset contatore doppia soglia
+  tickAlgoritmo._quietCont  = 0;
+  tickAlgoritmo._decCont    = 0;
+  tickAlgoritmo._quietPost  = 0;  // FIX v4.4: reset esplicito – evita residui di sessioni precedenti
+
+  document.getElementById('numRep').textContent   = '0';
+  document.getElementById('numPicco').textContent = '—';
+  document.getElementById('numLoss').textContent  = '—';
+  document.getElementById('numLoss').className    = 'mval';
+  document.getElementById('numVel').textContent   = '—';
+  document.getElementById('repList').innerHTML    =
+    '<div class="empty">Esegui la prima ripetizione…</div>';
+  setZona('idle');
+  document.getElementById('tagStatus').textContent = '▶ Pronto — esegui le rep';
+  document.getElementById('dot').classList.add('active');
+  document.getElementById('btnGo').disabled  = true;
+  document.getElementById('btnStop').disabled= false;
+
+  // Il loop gira sul devicemotion direttamente
+  // (non usiamo setInterval separato — più fedele alla frequenza reale)
+  window.addEventListener('devicemotion', tickAlgoritmo, true);
+
+  // V4.3: aggiorna label storico con numero serie corrente
+  const nSerie = parseInt(document.getElementById('inNSerie')?.value) || 1;
+  const lbl = document.getElementById('storicoLabel');
+  if (lbl) lbl.textContent = `Storico serie ${nSerie}`;
+  const setSumEl = document.getElementById('setSummary');
+  if (setSumEl) setSumEl.style.display = 'none';
+
+  toast('🔴 Serie avviata');
+  parla('Serie avviata');
+}
+
+function ferma() {
+  S.attiva = false;
+  S.inRep  = false;
+  window.removeEventListener('devicemotion', tickAlgoritmo, true);
+
+  document.getElementById('dot').classList.remove('active');
+  document.getElementById('btnGo').disabled  = false;
+  document.getElementById('btnStop').disabled= true;
+  setZona('idle');
+  document.getElementById('tagStatus').textContent =
+    `✅ Serie terminata · ${S.repN} rep`;
+
+  // V4.3: aggiorna label e riepilogo aggregato
+  const nSerie = parseInt(document.getElementById('inNSerie')?.value) || 1;
+  const lbl = document.getElementById('storicoLabel');
+  if (lbl) lbl.textContent = `Storico serie ${nSerie}`;
+  aggiornaSetSummary();
+
+  // V4.3: auto-incrementa N° Serie per la prossima
+  const inNS = document.getElementById('inNSerie');
+  if (inNS) inNS.value = nSerie + 1;
+
+  toast(`Serie terminata: ${S.repN} ripetizioni`);
+}
+
+/* V4.3 — Riepilogo aggregato per serie (valori medi/picco dell'intera serie) */
+function aggiornaSetSummary() {
+  const el = document.getElementById('setSummary');
+  if (!el || !S.repLog.length) return;
+  const vMs  = S.repLog.map(r => r.vM);
+  const vPs  = S.repLog.map(r => r.vP);
+  const pWs  = S.repLog.map(r => r.pw || 0);
+  const roms = S.repLog.map(r => r.rom || 0);
+  const avg  = arr => arr.reduce((a,b)=>a+b,0)/arr.length;
+  const cell = (label, val, color) =>
+    `<div style="text-align:center">
+       <div style="font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:3px">${label}</div>
+       <div style="font-size:15px;font-weight:700;color:${color||'var(--text)'}">${val}</div>
+     </div>`;
+  el.style.display = 'grid';
+  el.innerHTML =
+    cell('V.Media', avg(vMs).toFixed(2)+' m/s', 'var(--blue)') +
+    cell('V.Picco', Math.max(...vPs).toFixed(2)+' m/s', 'var(--green)') +
+    cell('Loss%',   S.vLoss.toFixed(1)+'%',     S.vLoss > 20 ? 'var(--red)' : 'var(--green)') +
+    cell('ROM med', avg(roms).toFixed(0)+' cm',  'var(--text)') +
+    cell('Potenza', pWs[0]>0 ? avg(pWs).toFixed(0)+' W' : '—', 'var(--orange)') +
+    cell('1RM stim', S.stima1RM > 0 ? S.stima1RM.toFixed(0)+' kg' : '—', 'var(--text)');
+}
+
+/* ═══════════════════════════════════════════════
+   LETTURA SOGLIE DAI CAMPI
+═══════════════════════════════════════════════ */
+function leggiSoglie() {
+  S.sogAtt = parseFloat(document.getElementById('inSogAtt').value) || 0.8;
+  S.sogMin = parseFloat(document.getElementById('inSMin').value)   || 0.30;
+  S.sogTgt = parseFloat(document.getElementById('inSTgt').value)   || 0.55;
+  S.pct1RM = parseInt(document.getElementById('sel1RM')?.value || '75', 10);
+  S.repRef = parseInt(document.getElementById('inRepRange')?.value || '1', 10);
+}
+
+/* ═══════════════════════════════════════════════
+   ALGORITMO VBT — chiamato a ogni evento devicemotion
+═══════════════════════════════════════════════ */
+let _azLPF    = 0;   // V4.2: stato filtro IIR passa-basso
+let _tickCount = 0;
+// V4.5: diagnostica 3 livelli (raw / filtrato / vel integrata live)
+let _diagRaw = 0, _diagFilt = 0, _diagVel = 0;
+
+/* ── V4.5: calcola alpha LPF adattivo in base agli Hz reali del sensore ──
+   Obiettivo: frequenza di taglio fc ≈ 4 Hz indipendentemente dal rate.
+   Formula primo ordine: α = 2π·fc·dt / (2π·fc·dt + 1)
+   Con fc=4Hz e dt dipendente da Hz reale (es. 50Hz→dt=0.020 → α≈0.333).
+   Clamp [0.15, 0.55] per sicurezza su device molto lenti o molto veloci.
+*/
+function _calcAlphaLPF(hzReal) {
+  const fc = 4.0; // Hz taglio target
+  const dt = hzReal > 0 ? 1 / hzReal : 0.020;
+  const w  = 2 * Math.PI * fc * dt;
+  return Math.min(0.55, Math.max(0.15, w / (w + 1)));
+}
+
+function tickAlgoritmo(e) {
+  if (!S.attiva) return;
+
+  // FIX BUG 1+7: usa e.acceleration (pura, senza gravità) se disponibile.
+  // Questo elimina completamente il problema della componente gravitazionale
+  // dinamica che cambia con l'inclinazione del telefono durante il movimento.
+  // Fallback su accelerationIncludingGravity con offset calibrato se
+  // e.acceleration non è disponibile o è null.
+  const aPura = e.acceleration;
+  const aConG = e.accelerationIncludingGravity;
+
+  let useAccPura = false;
+  if (aPura && aPura.x !== null && aPura.y !== null && aPura.z !== null) {
+    useAccPura = true;
+  }
+
+  if (useAccPura) {
+    // Accelerazione pura: nessuna compensazione gravità necessaria
+    S.rawX = aPura.x ?? 0;
+    S.rawY = aPura.y ?? 0;
+    S.rawZ = aPura.z ?? 0;
+    // Offset = 0 se usiamo accPura (già gravity-free)
+    // ma manteniamo S.off* a 0 effettivo per getAzNetto
+    S.useAccPura = true;
+  } else {
+    // Fallback: accelerationIncludingGravity con sottrazione offset calibrato
+    if (!aConG) return;
+    S.rawX = aConG.x ?? 0;
+    S.rawY = aConG.y ?? 0;
+    S.rawZ = aConG.z ?? 0;
+    S.useAccPura = false;
+  }
+
+  // Delta T reale tra eventi
+  const now = performance.now();
+  const dt  = S.lastT > 0 ? (now - S.lastT) / 1000 : 0.020;
+  S.lastT   = now;
+  // FIX BUG 6: clamp dt allargato a 150ms (era 100ms).
+  // Questo consente di non perdere campioni su dispositivi con
+  // scheduler variabile o in transizione da pausa.
+  // Sotto 1ms → errore strumentale, scarta.
+  if (dt < 0.001 || dt > 0.150) return;
+
+  const azN_raw = getAzNetto();
+  // V4.5: Filtro IIR passa-basso con alpha ADATTIVO basato su Hz reale.
+  // Target fc = 4 Hz: elimina rumore MEMS senza attenuare la spinta concentrica
+  // (i movimenti di sollevamento hanno contenuto spettrale < 2 Hz).
+  // Alpha si adatta automaticamente: 50Hz→α≈0.333, 100Hz→α≈0.200, 25Hz→α≈0.500.
+  const _alpha = _calcAlphaLPF(S.hzReal || 50);
+  _azLPF = _alpha * azN_raw + (1 - _alpha) * _azLPF;
+  const azN = _azLPF;
+  // V4.5: aggiorna variabili diagnostica 3 livelli
+  _diagRaw  = azN_raw;
+  _diagFilt = azN;
+
+  // Aggiorna signal bar 3 livelli (ogni 3 eventi)
+  if (++_tickCount % 3 === 0) {
+    // Livello 1: raw
+    const rawPct = Math.min(100, Math.abs(_diagRaw) / 6 * 100);
+    document.getElementById('barFill').style.width = rawPct + '%';
+    document.getElementById('lblAzRaw').textContent = _diagRaw.toFixed(3);
+    // Livello 2: filtrato
+    const filtPct = Math.min(100, Math.abs(_diagFilt) / 6 * 100);
+    document.getElementById('barFiltFill').style.width = filtPct + '%';
+    document.getElementById('lblAzFilt').textContent = _diagFilt.toFixed(3);
+    // Livello 3: velocità integrata (scala 0–2 m/s)
+    const velPct = Math.min(100, Math.abs(_diagVel) / 2.0 * 100);
+    document.getElementById('barVelFill').style.width = velPct + '%';
+    document.getElementById('lblVelLive').textContent = _diagVel.toFixed(2);
+    // Diagnostica asse (manteniamo dAzN con valore filtrato per coerenza)
+    document.getElementById('dAzN').textContent     = _diagFilt.toFixed(3);
+    document.getElementById('pCamp').textContent    = 'campioni: ' + S.camp.length;
+    // V4.5: mostra alpha adattivo nella pill diagnostica
+    const _alphaDisp = _calcAlphaLPF(S.hzReal || 50);
+    const pAlphaEl = document.getElementById('pAlpha');
+    if (pAlphaEl) pAlphaEl.textContent = `α LPF: ${_alphaDisp.toFixed(3)} (${S.hzReal||'?'}Hz)`;
+    /* FIX v4.4: diagnostica stato refrattario visibile
+       Prima: sempre "⬤ attesa" tra le rep → impossibile capire quando il
+       periodo refrattario era attivo e perché una rep non partiva.
+       Ora: distingue tre stati — IN REP / POST-REP (refrattario) / attesa. */
+    const _inPostRep = !S.inRep && S.lastRepEndT !== null;
+    const _pStatoEl  = document.getElementById('pStato');
+    _pStatoEl.textContent = S.inRep    ? '🔴 in rep'
+                          : _inPostRep ? '⏳ post-rep'
+                          :              '⬤ attesa';
+    _pStatoEl.className   = S.inRep    ? 'pill err'
+                          : _inPostRep ? 'pill warn'
+                          :              'pill';
+  }
+
+  /* ══════════════════════════════════════════
+     RILEVAMENTO INIZIO REP
+     Anti-rimbalzo rafforzato: richiede N campioni CONSECUTIVI sopra soglia.
+     N=5 ≈ 100ms a 50Hz → elimina spike di rumore (durata tipica < 60ms).
+     La soglia sogAtt è ora 0.8 m/s² (default) → sopra il rumore MEMS
+     tipico di ±0.3–0.6 m/s² a riposo.
+  ══════════════════════════════════════════ */
+  const PRE_REP_N = 5;   // campioni consecutivi richiesti per avviare rep
+
+  /* ── Periodo refrattario post-rep (V4.3) ──────────────────────────────
+     Dopo ogni rep confermata, il rilevamento è bloccato per due condizioni
+     entrambe soddisfatte:
+       1. MIN_INTER_REP_MS: tempo minimo trascorso dall'ultima rep (800ms).
+          Garantisce che rimbalzi meccanici e oscillazioni del bilanciere
+          durante la fase eccentrica non aprano una nuova rep.
+       2. QUIET_POST_REP_N: il segnale deve restare sotto soglia per almeno
+          N campioni consecutivi dopo il cooldown temporale (15 camp ≈ 300ms).
+          Garantisce che il sensore sia effettivamente fermo prima di
+          riabilitare il rilevamento.
+     Insieme i due filtri eliminano i falsi positivi post-rep senza
+     aumentare la latenza di rilevamento delle rep reali (che arrivano
+     sempre dopo una pausa eccentrica significativa).
+  ────────────────────────────────────────────────────────────────────── */
+  const MIN_INTER_REP_MS  = 800;   // ms minimi tra fine rep e inizio prossima
+  const QUIET_POST_REP_N  = 15;    // campioni consecutivi sotto soglia richiesti
+
+  if (!S.inRep) {
+    // FIX v4.4: usa il `now` catturato all'inizio del tick (già scritto in S.lastT),
+    // non ri-campionare — la ridichiarazione `const now` qui dentro creava uno
+    // shadow block-scoped con timestamp diverso da quello usato per calcolare dt.
+
+    // -- Fase 1: attendi MIN_INTER_REP_MS dalla fine dell'ultima rep --
+    if (S.lastRepEndT && (now - S.lastRepEndT) < MIN_INTER_REP_MS) {
+      tickAlgoritmo._preRep    = 0;
+      tickAlgoritmo._quietPost = 0;
+      return;
+    }
+
+    // -- Fase 2: richiedi QUIET_POST_REP_N campioni sotto soglia --
+    if (S.lastRepEndT) {
+      if (!tickAlgoritmo._quietPost) tickAlgoritmo._quietPost = 0;
+      if (azN <= S.sogAtt) {
+        tickAlgoritmo._quietPost++;
+      } else {
+        tickAlgoritmo._quietPost = 0;
+      }
+      if (tickAlgoritmo._quietPost < QUIET_POST_REP_N) {
+        tickAlgoritmo._preRep = 0;
+        return;
+      }
+      // Quiete confermata: annulla lastRepEndT per non ri-controllare
+      S.lastRepEndT = null;
+      tickAlgoritmo._quietPost = 0;
+    }
+
+    // -- Fase 3: rilevamento inizio rep con DOPPIA SOGLIA (V4.5) --
+    // Soglia primaria (sogAtt): campioni che contribuiscono al conteggio anti-rimbalzo.
+    // Soglia di conferma (sogConf = sogAtt * 1.8): almeno CONF_N dei PRE_REP_N campioni
+    // devono superarla per confermare che si tratta di vera spinta e non di rumore elevato
+    // o micro-vibrazione che supera solo la soglia primaria.
+    // Questo elimina i falsi avvii su device con noise floor alto senza aumentare
+    // la latenza di rilevamento delle rep reali (la fase concentrica iniziale supera
+    // tipicamente 2–4x sogAtt nei primi 100ms).
+    const SOG_CONF  = S.sogAtt * 1.8;  // soglia di conferma
+    const CONF_N    = 3;                // campioni sopra sogConf richiesti su PRE_REP_N
+
+    if (azN > S.sogAtt) {
+      if (!tickAlgoritmo._preRep)      tickAlgoritmo._preRep = 0;
+      if (!tickAlgoritmo._preRepHigh)  tickAlgoritmo._preRepHigh = 0;
+      tickAlgoritmo._preRep++;
+      if (azN > SOG_CONF) tickAlgoritmo._preRepHigh++;
+      if (tickAlgoritmo._preRep >= PRE_REP_N &&
+          tickAlgoritmo._preRepHigh >= CONF_N) {
+        S.inRep = true;
+        tickAlgoritmo._preRep     = 0;
+        tickAlgoritmo._preRepHigh = 0;
+        tickAlgoritmo._quietCont  = 0;
+        tickAlgoritmo._decCont    = 0;
+        S.camp = [];
+        S.vel  = [0];
+        S.campDt = [];            // V4.3: reset dt per-campione
+        S.repStartT = performance.now(); // V4.3: timestamp inizio rep
+        S.vPiccoInRep = 0;
+      }
+    } else {
+      tickAlgoritmo._preRep     = 0;
+      tickAlgoritmo._preRepHigh = 0;
+    }
+    return;
+  }
+
+  /* ══════════════════════════════════════════
+     DURANTE REP: accumula campioni e integra
+  ══════════════════════════════════════════ */
+  S.camp.push(azN);
+  S.campDt.push(dt); // V4.3: traccia dt per-campione (usato per ROM e Durata)
+
+  // ── Integrazione trapezoidale con dt reale ──
+  const ultimaV = S.vel[S.vel.length - 1];
+  const aPrec   = S.camp.length >= 2 ? S.camp[S.camp.length - 2] : azN;
+  let nuovaV    = ultimaV + ((aPrec + azN) / 2) * dt;
+  // Il drift è gestito da: (1) LPF adattivo fc=4Hz prima dell'integrazione,
+  // (2) ZVU sotto che azzera quando il segnale è sotto soglia quiete ≥ 4 camp.
+
+  // ── Zero-Velocity Update (ZVU) ──
+  // Se azN è sotto la soglia di rumore per ≥ 4 campioni consecutivi,
+  // l'atleta è fermo: azzera la velocità integrata per bloccare il drift.
+  // Soglia ZVU = 15% di sogAtt (rumore residuo dopo calibrazione).
+  if (!tickAlgoritmo._quietCont) tickAlgoritmo._quietCont = 0;
+  // V4.2: soglia ZVU ampliata — il noise floor MEMS tipico è 0.15–0.25 m/s²
+  // Il minimo assoluto 0.18 m/s² evita ZVU mancati su sensori rumorosi.
+  const ZVU_THR = Math.max(S.sogAtt * 0.20, 0.18);
+  if (Math.abs(azN) < ZVU_THR) {
+    tickAlgoritmo._quietCont++;
+    if (tickAlgoritmo._quietCont >= 4) {
+      nuovaV = 0;
+    }
+  } else {
+    tickAlgoritmo._quietCont = 0;
+  }
+
+  // ── Cap fisico di plausibilità ──
+  // Il cap adattivo da tabella (getVCapByPct) si applica SOLO se l'utente
+  // ha inserito un carico reale (> 0): in quel caso il %1RM è significativo
+  // e la tabella riflette la curva forza-velocità attesa.
+  // Se carico = 0 (sessione senza carico o campo non compilato) si usa il
+  // solo hard-cap fisico 2.0 m/s, evitando che il default pct=75 imponga
+  // un ceiling artificiale di ~1.02 m/s che falsa il Peak Velocity.
+  const _caricoAttuale = parseFloat(document.getElementById('inCarico')?.value) || 0;
+  const V_CAP = _caricoAttuale > 0 ? getVCapByPct(S.pct1RM || 75) : 2.0;
+  if (nuovaV > V_CAP) nuovaV = V_CAP;
+  if (nuovaV < 0)     nuovaV = 0;
+
+  S.vel.push(nuovaV);
+  _diagVel = nuovaV; // V4.5: aggiorna diagnostica livello 3
+
+  // Aggiorna picco in-rep
+  if (nuovaV > S.vPiccoInRep) S.vPiccoInRep = nuovaV;
+
+  /* ══════════════════════════════════════════
+     RILEVAMENTO FINE REP
+     Condizioni (tutte e tre devono essere vere):
+     A. Durata minima raggiunta (≥ 20 camp ≈ 400ms): esclude spike brevi
+     B. Accelerazione tornata sotto il 60% della soglia di attivazione
+        per almeno 5 campioni consecutivi (decelerazione sostenuta)
+     C. Velocità scesa sotto il 25% del picco intra-rep
+        (bilanciere ha quasi fermato la salita)
+  ══════════════════════════════════════════ */
+  if (!tickAlgoritmo._decCont) tickAlgoritmo._decCont = 0;
+  const accBassa = Math.abs(azN) < S.sogAtt * 0.6;
+  if (accBassa) {
+    tickAlgoritmo._decCont++;
+  } else {
+    tickAlgoritmo._decCont = 0;
+  }
+
+  const A = S.camp.length >= 20;
+  const B = tickAlgoritmo._decCont >= 5;
+  const C = nuovaV < S.vPiccoInRep * 0.25;
+
+  if (A && B && C) {
+    S.inRep = false;
+    S.lastRepEndT = performance.now(); // V4.3: avvia periodo refrattario
+    tickAlgoritmo._quietCont = 0;
+    tickAlgoritmo._preRep    = 0;
+    tickAlgoritmo._decCont   = 0;
+    tickAlgoritmo._quietPost = 0;
+    calcolaRep();
+    S.camp   = [];
+    S.vel    = [];
+    S.campDt = [];    // V4.3
+    S.vPiccoInRep = 0;
+    return;
+  }
+
+  /* Sicurezza: rep troppo lunga (>350 campioni ≈ 7s) → forza fine */
+  if (S.vel.length > 350) {
+    S.inRep = false;
+    S.lastRepEndT = performance.now(); // V4.3: avvia periodo refrattario
+    tickAlgoritmo._quietCont = 0;
+    tickAlgoritmo._decCont   = 0;
+    tickAlgoritmo._quietPost = 0;
+    calcolaRep();
+    S.camp   = [];
+    S.vel    = [];
+    S.campDt = [];    // V4.3
+    S.vPiccoInRep = 0;
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   CALCOLA METRICHE REP
+═══════════════════════════════════════════════ */
+function calcolaRep() {
+  if (S.vel.length < 5) return; // rep troppo corta → scarta
+
+  S.repN++;
+
+  // ── Velocità picco ──
+  S.vPicco = Math.max(...S.vel);
+
+  // ── Velocità media sulla finestra concentrica ──
+  // Prende solo i campioni dalla prima salita fino al picco (esclude
+  // la coda di decelerazione che contiene valori bassi non rappresentativi
+  // della vera velocità di sollevamento).
+  const iPicco = S.vel.indexOf(S.vPicco);
+  // Finestra: dal primo campione > 0 fino al picco incluso
+  const finestra = S.vel.slice(0, iPicco + 1).filter(v => v > 0);
+  S.vMedia = finestra.length > 0
+    ? finestra.reduce((a,b)=>a+b,0) / finestra.length
+    : S.vPicco;
+
+  // Sanity check: vMedia non può superare vPicco
+  if (S.vMedia > S.vPicco) S.vMedia = S.vPicco;
+
+  // V4.2: verifica coerenza con la curva forza-velocità attesa per %1RM
+  S._ultimaCoerenza = validaCoerenza(S.vMedia, S.pct1RM || 75, S.repN);
+
+  // Riferimento Loss
+  if (S.repN === 1) S.vRef = S.vMedia;
+  S.vLoss = S.vRef > 0 ? (1 - S.vMedia / S.vRef) * 100 : 0;
+
+  /* ── V4.3: metriche Vbt Training-compatibili ────────────────────────────
+     Calcolate sull'intero array S.vel (campioni durante rep) con dt da S.campDt
+  ─────────────────────────────────────────────────────────────────── */
+
+  // Durata rep (ms): somma dt campioni accumulati
+  const dtArr = S.campDt.length === S.vel.length - 1
+    ? S.campDt                          // campDt non include il primo vel=[0]
+    : S.campDt;
+  S.durMs = Math.round(dtArr.reduce((a,b) => a+b, 0) * 1000);
+
+  // ROM (cm): integrazione trapezoidale di vel*dt
+  // vel[i] si riferisce al momento dopo il campione i-1
+  let romM = 0;
+  for (let i = 1; i < S.vel.length; i++) {
+    const dtI = (dtArr[i-1] !== undefined) ? dtArr[i-1] : 0.020;
+    romM += ((S.vel[i-1] + S.vel[i]) / 2) * dtI;
+  }
+  S.romCm = parseFloat((romM * 100).toFixed(2));
+  if (S.romCm < 0) S.romCm = 0;
+
+  // Time-to-peak-velocity (ms): somma dt fino all'indice del picco
+  let tPicco = 0;
+  for (let i = 0; i < iPicco && i < dtArr.length; i++) {
+    tPicco += dtArr[i];
+  }
+  S.tPiccoMs = Math.round(tPicco * 1000);
+
+  // Indice di accelerazione (m/s²): vPicco / (time-to-peak in secondi)
+  // Formula Vbt Training: az_medio = vPicco / t_peak
+  const tPiccoS = S.tPiccoMs / 1000;
+  S.accelIdx = tPiccoS > 0
+    ? parseFloat((S.vPicco / tPiccoS).toFixed(2))
+    : 0;
+
+  // Potenza media (W): F * vMedia, F = massa * g (solo forza gravitazionale)
+  // Metodo Vbt Training: P = m * 9.81 * vMedia (standard per sollevamenti verticali)
+  const kg = parseFloat(document.getElementById('inCarico')?.value) || 0;
+  S.meanPowerW = kg > 0
+    ? parseFloat((kg * 9.81 * S.vMedia).toFixed(2))
+    : 0;
+
+  // Stima 1RM (kg): metodo Jidovtseff-VBT (v0 da curva + regressione lineare)
+  // Approssimazione con tabella VBT_1RM già presente: 1RM = carico / pct * 100
+  // Integrata con correzione velocità: se vMedia < atteso → carico percepito > dichiarato
+  // Formula semplificata: 1RM_stimato = carico * (1 + repN / 30)  [Epley modificata]
+  // Per VBT monorep si usa: 1RM = carico / (1.0278 - 0.0278 * vMediaNorm)
+  // dove vMediaNorm = vMedia / v1RM_ref (v a 1RM ≈ 0.17 m/s per squat)
+  if (kg > 0 && S.vMedia > 0) {
+    const v1RM_ref = 0.17; // m/s soglia 1RM per squat/deadlift (adattabile)
+    const ratio = Math.min(S.vMedia / v1RM_ref, 3.0); // clamp per sicurezza
+    // Formola Brzycki-VBT: 1RM = carico / (1.0278 - 0.0278 * ratio)
+    const denom = 1.0278 - 0.0278 * ratio;
+    S.stima1RM = denom > 0.01
+      ? parseFloat((kg / denom).toFixed(2))
+      : parseFloat((kg * 1.35).toFixed(2));
+  } else {
+    S.stima1RM = 0;
+  }
+  /* ── Fine V4.3 metriche ───────────────────────────────────────── */
+
+  // Aggiorna display
+  document.getElementById('numRep').textContent  = S.repN;
+  document.getElementById('numVel').textContent  = S.vMedia.toFixed(2);
+  document.getElementById('numPicco').textContent= S.vPicco.toFixed(2);
+  const lossEl = document.getElementById('numLoss');
+  lossEl.textContent = S.vLoss.toFixed(1) + '%';
+  lossEl.className   = 'mval ' + (S.vLoss > 20 ? 'bad' : 'ok');
+
+  // Soglie + feedback
+  valutaSoglia();
+
+  // Voce
+  //parla(S.vMedia.toFixed(2) + ' metri al secondo');
+
+  // Log
+  logRep();
+}
+
+/* ═══════════════════════════════════════════════
+   VALUTAZIONE SOGLIE + FEEDBACK
+═══════════════════════════════════════════════ */
+function valutaSoglia() {
+  const v = S.vMedia;
+  let zona;
+
+  if (v >= S.sogTgt) {
+    zona = 'verde';
+    document.getElementById('tagStatus').textContent = '✅ TARGET RAGGIUNTO';
+    // nessun beep
+    parla('Target raggiunto' + S.vMedia.toFixed(2));
+  } else if (v >= S.sogMin) {
+    zona = 'orange';
+    document.getElementById('tagStatus').textContent = '⚠️ SOTTO TARGET';
+    beep(660, 200, .5);
+  } else {
+    zona = 'rossa';
+    document.getElementById('tagStatus').textContent = '🔴 SOTTO SOGLIA — FERMATI! · 🚨 Vel.anomala';
+     parla('Sei sottosoglia, Fermati!!'+ S.vMedia.toFixed(2));
+    beepDoppio();
+    vibra(500);
+  }
+
+  // V4.2: overlay anomalia velocità — mostra avviso se valore fuori curva
+  if (S._ultimaCoerenza && !S._ultimaCoerenza.ok) {
+    const tagEl = document.getElementById('tagStatus');
+    tagEl.textContent += ' · 🚨 Vel.anomala';
+    const pStEl = document.getElementById('pStato');
+    if (pStEl) {
+      pStEl.textContent = S._ultimaCoerenza.label;
+      pStEl.className   = S._ultimaCoerenza.troppoAlto ? 'pill err' : 'pill warn';
+    }
+    if (S._ultimaCoerenza.troppoAlto) {
+      toast('🚨 Drift sensore — ricalibra o cambia asse.');
+      parla('Velocità anomala. Verifica calibrazione.');
+    }
+  }
+
+  setZona(zona);
+  aggiornaRepList(zona);
+}
+
+function setZona(zona) {
+  const card = document.getElementById('liveCard');
+  const main = document.getElementById('velMain');
+  const num  = document.getElementById('numVel');
+  const tag  = document.getElementById('tagStatus');
+  [card, main, num, tag].forEach(el =>
+    el.className = el.className.replace(/\b(verde|orange|rossa|idle)\b/g,'').trim()
+  );
+  if (zona !== 'idle') {
+    card.classList.add(zona);
+    main.classList.add(zona);
+    num.classList.add(zona);
+    tag.classList.add(zona);
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   LISTA REP
+═══════════════════════════════════════════════ */
+function aggiornaRepList(zona) {
+  const icona = zona==='verde'?'✅':zona==='orange'?'⚠️':'🔴';
+  S.repLog.push({
+    n: S.repN, vM: S.vMedia, vP: S.vPicco, zona,
+    rom: S.romCm, pw: S.meanPowerW, loss: S.vLoss, dur: S.durMs,
+    anomalia: !!(S._ultimaCoerenza && !S._ultimaCoerenza.ok && S._ultimaCoerenza.troppoAlto)
+  });
+  document.getElementById('repList').innerHTML =
+    S.repLog.slice().reverse().map(r =>
+      `<div class="rep-row ${r.zona}">
+        <span class="rep-n">REP ${r.n}</span>
+        <span class="rep-v ${r.zona}">${r.vM.toFixed(2)} m/s</span>
+        <span class="rep-meta">↑${r.vP.toFixed(2)} · ${r.rom.toFixed(0)}cm · ${r.pw > 0 ? r.pw.toFixed(0)+'W' : '—'} · −${r.loss.toFixed(1)}%</span>
+        <span>${r.zona==='verde'?'✅':r.zona==='orange'?'⚠️':'🔴'}${r.anomalia?' 🚨':''}</span>
+       </div>`
+    ).join('');
+}
+
+/* ═══════════════════════════════════════════════
+   TTS
+═══════════════════════════════════════════════ */
+function parla(txt) {
+  if (!('speechSynthesis' in window)) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(txt);
+  u.lang='it-IT'; u.rate=1.25; u.volume=.9;
+  speechSynthesis.speak(u);
+}
+
+/* ═══════════════════════════════════════════════
+   LOG CSV (Versione senza colonna Email)
+═══════════════════════════════════════════════ */
+function logRep() {
+  const es     = document.getElementById('selEs');
+  const esNome = es ? es.options[es.selectedIndex].text : '';
+  const carico = parseFloat(document.getElementById('inCarico')?.value) || 0;
+  const atleta = (document.getElementById('inAtleta')?.value || '').trim();
+  const nSerie = parseInt(document.getElementById('inNSerie')?.value) || 1;
+  const now    = new Date();
+
+  // Formato data Vbt Training: DD/MM/YYYY
+  const pad = n => String(n).padStart(2,'0');
+  const dataStr = `${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()}`;
+  // Formato ora Vbt Training: HH:MM:SS
+  const oraStr  = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+
+  S.storico.push({
+    atleta,
+    cognome:     '',
+    esercizio:   esNome,
+    dataStr,
+    oraStr,
+    nSerie,
+    carico,
+    commenti:    '',
+    nRep:        S.repN,
+    tipo:        'C',
+    vMedia:      S.vMedia,
+    vPicco:      S.vPicco,
+    romCm:       S.romCm,
+    meanPowerW:  S.meanPowerW,
+    stima1RM:    S.stima1RM,
+    durMs:       S.durMs,
+    tPiccoMs:    S.tPiccoMs,
+    accelIdx:    S.accelIdx,
+    vLoss:       S.vLoss,
+  });
+}
+
+function salva() {
+  if (!S.storico.length) { toast('⚠️ Nessun dato'); return; }
+  try {
+    localStorage.setItem('vbt_'+Date.now(), JSON.stringify(S.storico));
+    toast(`✅ Salvato (${S.repN} rep)`);
+  } catch(e) { toast('❌ Errore salvataggio'); }
+}
+
+/* Esporta CSV senza colonna Email */
+function esportaCSV() {
+  if (!S.storico.length) { toast('⚠️ Nessun dato'); return; }
+
+  // Funzione helper: converte numero in stringa con virgola decimale (locale IT)
+  const itNum = (n, dec) => {
+    if (n === null || n === undefined || isNaN(n)) return '';
+    return n.toFixed(dec).replace('.', ',');
+  };
+
+  // Colonne condizionali: includi Mean Power solo se almeno una rep ha carico > 0
+  // (meanPowerW = kg * 9.81 * vMedia, quindi > 0 solo se carico era inserito)
+  const hasPower = S.storico.some(r => r.meanPowerW > 0);
+  // Dynamic-isometric strength: non misurabile da accelerometro → esclusa sempre
+  // (placeholder '': colonna soppressa, nessun dato affidabile)
+
+  const headers = [
+    'Athlete', 'Last Name', 'Exercise',
+    'Workout Date', 'Repetition Date',
+    '# Set', 'Weight (kg)', 'Comments', '# Rep.', 'Type*',
+    'Main velocity [MPV/MV] (m/s)', 'Peak Velocity (m/s)', 'ROM (cm)',
+    ...(hasPower ? ['Mean Power (W)'] : []),
+    '1RM (kg)',
+    'Duration (ms)', 'Time to peak velocity (ms)',
+    'Acceleration index (m/s²)',
+  ];
+
+  const rows = S.storico.map(r => [
+    r.atleta,
+    r.cognome,
+    r.esercizio,
+    r.dataStr,
+    ` ${r.oraStr}`,          // spazio iniziale = formato
+    r.nSerie,
+    `"${r.carico}"`,
+    r.commenti,
+    r.nRep,
+    r.tipo,
+    `"${itNum(r.vMedia, 2)}"`,
+    `"${itNum(r.vPicco, 2)}"`,
+    `"${itNum(r.romCm,  2)}"`,
+    ...(hasPower ? [`"${itNum(r.meanPowerW, 2)}"`] : []),
+    `"${itNum(r.stima1RM,   2)}"`,
+    r.durMs,
+    r.tPiccoMs,
+    `"${itNum(r.accelIdx, 2)}"`,
+  ].join(','));
+
+  // BOM UTF-8 per compatibilità Excel
+  const BOM  = '\uFEFF';
+  const body = BOM + headers.join(',') + '\n' + rows.join('\n');
+  const blob = new Blob([body], {type:'text/csv;charset=utf-8;'});
+  const a    = document.createElement('a');
+  a.href     = URL.createObjectURL(blob);
+  a.download = 'VBT-Training' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('📤 CSV Vbt Training scaricato!');
+}
+
+/* ── Theme init (eseguito subito, non serve DOMContentLoaded) ── */
+(function(){
+  const sw = document.getElementById('themeSwitch');
+  if (!sw) return;
+  const applyTheme = (light) => {
+    document.documentElement.setAttribute('data-theme', light ? 'light' : 'dark');
+    const mc = document.querySelector('meta[name="theme-color"]');
+    if(mc) mc.content = light ? '#f0f2f7' : '#0a0a0f';
+    try { localStorage.setItem('vbt_theme', light ? 'light' : 'dark'); } catch(e){}
+  };
+  const saved = (() => { try { return localStorage.getItem('vbt_theme'); } catch(e){ return null; } })();
+  const preferLight = saved ? saved === 'light' : window.matchMedia('(prefers-color-scheme: light)').matches;
+  sw.checked = preferLight;
+  applyTheme(preferLight);
+  sw.addEventListener('change', () => applyTheme(sw.checked));
+})();
+</script>
+</body>
+</html>
