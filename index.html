@@ -1832,7 +1832,7 @@ function valutaSoglia() {
     zona = 'rossa';
     document.getElementById('tagStatus').textContent = '🔴 SOTTO SOGLIA · 🚨 Vel.anomala';
     beep(659, 100, 0.5); // Nota più alta (Mi5)
-    setTimeout(() => { beep(494, 150, 0.5); }, 120); // Nota più bassa (Si4)
+    setTimeout(() => { beep(800, 200, 0.5); }, 150); // Nota più bassa (Si4)
     vibra(500);
   }
   // overlay anomalia velocità — mostra avviso se valore fuori curva
