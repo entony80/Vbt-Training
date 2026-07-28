@@ -671,10 +671,10 @@ const S = {
   vPiccoInRep: 0,
   // FIX BUG 1+7: flag se stiamo usando e.acceleration (pura) o con gravità
   useAccPura: false,
-  // V4.2 — percentuale 1RM e rep correnti (letti in leggiSoglie)
+  // percentuale 1RM e rep correnti (letti in leggiSoglie)
   pct1RM: 75,
   repRef: 1,
-  // V4.2 — esito ultima verifica coerenza velocità vs curva %1RM
+  // esito ultima verifica coerenza velocità vs curva %1RM
   _ultimaCoerenza: null,
   // V4.3 — parametri Vbt Training-compatibili per rep corrente
   romCm: 0,        // ROM integrata (cm)
@@ -779,7 +779,7 @@ function getVBTTarget(pct, reps=1) {
   return candidates.find(v => v != null) ?? null;
 }
 /* ═══════════════════════════════════════════════
-   V4.2 — CAP ADATTIVO E VALIDAZIONE COERENZA
+   CAP ADATTIVO E VALIDAZIONE COERENZA
    Correggono l'incongruenza "90% 1RM → 1.12 m/s":
    • getVCapByPct: hard-cap fisico scalato sul carico
    • validaCoerenza: verifica che il risultato stia
@@ -1306,7 +1306,7 @@ function avvia() {
   // V4.3: reset metriche Vbt Training
   S.romCm = 0; S.durMs = 0; S.tPiccoMs = 0;
   S.meanPowerW = 0; S.accelIdx = 0; S.stima1RM = 0;
-  _azLPF = 0;   // V4.2: reset filtro IIR all'avvio serie
+  _azLPF = 0;   // reset filtro IIR all'avvio serie
   // Reset contatori interni tick
   tickAlgoritmo._preRep     = 0;
   tickAlgoritmo._preRepHigh = 0;  // V4.5: reset contatore doppia soglia
@@ -1405,7 +1405,7 @@ function leggiSoglie() {
 /* ═══════════════════════════════════════════════
    ALGORITMO VBT — chiamato a ogni evento devicemotion
 ═══════════════════════════════════════════════ */
-let _azLPF    = 0;   // V4.2: stato filtro IIR passa-basso
+let _azLPF    = 0;   // stato filtro IIR passa-basso
 let _tickCount = 0;
 // V4.5: diagnostica 3 livelli (raw / filtrato / vel integrata live)
 let _diagRaw = 0, _diagFilt = 0, _diagVel = 0;
@@ -1622,7 +1622,7 @@ function tickAlgoritmo(e) {
   // l'atleta è fermo: azzera la velocità integrata per bloccare il drift.
   // Soglia ZVU = 15% di sogAtt (rumore residuo dopo calibrazione).
   if (!tickAlgoritmo._quietCont) tickAlgoritmo._quietCont = 0;
-  // V4.2: soglia ZVU ampliata — il noise floor MEMS tipico è 0.15–0.25 m/s²
+  // soglia ZVU ampliata — il noise floor MEMS tipico è 0.15–0.25 m/s²
   // Il minimo assoluto 0.18 m/s² evita ZVU mancati su sensori rumorosi.
   const ZVU_THR = Math.max(S.sogAtt * 0.20, 0.18);
   if (Math.abs(azN) < ZVU_THR) {
@@ -1728,7 +1728,7 @@ function calcolaRep() {
   // Sanity check: vMedia non può superare vPicco
   if (S.vMedia > S.vPicco) S.vMedia = S.vPicco;
 
-  // V4.2: verifica coerenza con la curva forza-velocità attesa per %1RM
+  // verifica coerenza con la curva forza-velocità attesa per %1RM
   S._ultimaCoerenza = validaCoerenza(S.vMedia, S.pct1RM || 75, S.repN);
 
   // Riferimento Loss
@@ -1838,7 +1838,7 @@ function valutaSoglia() {
     vibra(500);
   }
 
-  // V4.2: overlay anomalia velocità — mostra avviso se valore fuori curva
+  // overlay anomalia velocità — mostra avviso se valore fuori curva
   if (S._ultimaCoerenza && !S._ultimaCoerenza.ok) {
     const tagEl = document.getElementById('tagStatus');
     tagEl.textContent += ' · 🚨 Vel.anomala';
