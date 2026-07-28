@@ -1828,11 +1828,12 @@ function valutaSoglia() {
   } else if (v >= S.sogMin) {
     zona = 'orange';
     document.getElementById('tagStatus').textContent = '⚠️ SOTTO TARGET';
-    beep(660, 200, .5);
+    //beep(660, 200, .5);
+    beepDoppio();
   } else {
     zona = 'rossa';
     document.getElementById('tagStatus').textContent = '🔴 SOTTO SOGLIA — FERMATI! · 🚨 Vel.anomala';
-     parla('Sei sottosoglia, Fermati!!'+ S.vMedia.toFixed(2));
+     parla('Sei sottosoglia'+ S.vMedia.toFixed(2));
     beepDoppio();
     vibra(500);
   }
