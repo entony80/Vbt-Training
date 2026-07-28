@@ -378,7 +378,7 @@ html[data-theme="dark"] .app,html[data-theme="dark"] .card,html[data-theme="dark
       <div class="tog-arr open" id="storicoArr">▼</div>
     </div>
     <div class="collap open" id="storicoBody" style="margin-top:12px">
-      <!-- V4.3: riepilogo aggregato per serie -->
+      <!-- : riepilogo aggregato per serie -->
       <div id="setSummary" style="display:none;background:var(--surface);border-radius:var(--r-sm);
            padding:10px 12px;margin-bottom:10px;font-family:var(--font-data);font-size:11px;
            display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;"></div>
@@ -676,14 +676,14 @@ const S = {
   repRef: 1,
   // esito ultima verifica coerenza velocità vs curva %1RM
   _ultimaCoerenza: null,
-  // V4.3 — parametri Vbt Training-compatibili per rep corrente
+  //  — parametri Vbt Training-compatibili per rep corrente
   romCm: 0,        // ROM integrata (cm)
   durMs: 0,        // Durata rep (ms)
   tPiccoMs: 0,     // Time-to-peak-velocity (ms)
   meanPowerW: 0,   // Potenza media (W)
   accelIdx: 0,     // Indice di accelerazione (m/s²)
   stima1RM: 0,     // Stima 1RM (kg) con metodo Jidovtseff-VBT
-  // V4.3 — array dt campioni per calcoli temporali
+  //  — array dt campioni per calcoli temporali
   campDt: [],
   repStartT: 0,    // performance.now() inizio rep
   lastRepEndT: null, // performance.now() fine ultima rep (per periodo refrattario)
@@ -831,7 +831,7 @@ function validaCoerenza(vMedia, pct1RM, repN) {
 }
 
 /* ═══════════════════════════════════════════════
-   V4.3 — GESTIONE ESERCIZI DINAMICA
+    — GESTIONE ESERCIZI DINAMICA
    Esercizi salvati in localStorage → 'vbt_esercizi'
    Struttura: [{key, nome}]  (key = slug univoco)
 ═══════════════════════════════════════════════ */
@@ -1297,13 +1297,13 @@ function avvia() {
   S.vLoss  = 0;
   S.camp   = [];
   S.vel    = [];
-  S.campDt = [];    // V4.3
+  S.campDt = [];    // 
   S.repLog = [];
   S.storico= [];
   S.lastT  = performance.now();
   S.vPiccoInRep = 0;
-  S.lastRepEndT = null;  // V4.3: reset periodo refrattario
-  // V4.3: reset metriche Vbt Training
+  S.lastRepEndT = null;  // : reset periodo refrattario
+  // : reset metriche Vbt Training
   S.romCm = 0; S.durMs = 0; S.tPiccoMs = 0;
   S.meanPowerW = 0; S.accelIdx = 0; S.stima1RM = 0;
   _azLPF = 0;   // reset filtro IIR all'avvio serie
@@ -1331,7 +1331,7 @@ function avvia() {
   // (non usiamo setInterval separato — più fedele alla frequenza reale)
   window.addEventListener('devicemotion', tickAlgoritmo, true);
 
-  // V4.3: aggiorna label storico con numero serie corrente
+  // : aggiorna label storico con numero serie corrente
   const nSerie = parseInt(document.getElementById('inNSerie')?.value) || 1;
   const lbl = document.getElementById('storicoLabel');
   if (lbl) lbl.textContent = `Storico serie ${nSerie}`;
@@ -1354,20 +1354,20 @@ function ferma() {
   document.getElementById('tagStatus').textContent =
     `✅ Serie terminata · ${S.repN} rep`;
 
-  // V4.3: aggiorna label e riepilogo aggregato
+  // : aggiorna label e riepilogo aggregato
   const nSerie = parseInt(document.getElementById('inNSerie')?.value) || 1;
   const lbl = document.getElementById('storicoLabel');
   if (lbl) lbl.textContent = `Storico serie ${nSerie}`;
   aggiornaSetSummary();
 
-  // V4.3: auto-incrementa N° Serie per la prossima
+  // : auto-incrementa N° Serie per la prossima
   const inNS = document.getElementById('inNSerie');
   if (inNS) inNS.value = nSerie + 1;
 
   toast(`Serie terminata: ${S.repN} ripetizioni`);
 }
 
-/* V4.3 — Riepilogo aggregato per serie (valori medi/picco dell'intera serie) */
+/*  — Riepilogo aggregato per serie (valori medi/picco dell'intera serie) */
 function aggiornaSetSummary() {
   const el = document.getElementById('setSummary');
   if (!el || !S.repLog.length) return;
@@ -1522,7 +1522,7 @@ function tickAlgoritmo(e) {
   ══════════════════════════════════════════ */
   const PRE_REP_N = 5;   // campioni consecutivi richiesti per avviare rep
 
-  /* ── Periodo refrattario post-rep (V4.3) ──────────────────────────────
+  /* ── Periodo refrattario post-rep () ──────────────────────────────
      Dopo ogni rep confermata, il rilevamento è bloccato per due condizioni
      entrambe soddisfatte:
        1. MIN_INTER_REP_MS: tempo minimo trascorso dall'ultima rep (800ms).
@@ -1593,8 +1593,8 @@ function tickAlgoritmo(e) {
         tickAlgoritmo._decCont    = 0;
         S.camp = [];
         S.vel  = [0];
-        S.campDt = [];            // V4.3: reset dt per-campione
-        S.repStartT = performance.now(); // V4.3: timestamp inizio rep
+        S.campDt = [];            // : reset dt per-campione
+        S.repStartT = performance.now(); // : timestamp inizio rep
         S.vPiccoInRep = 0;
       }
     } else {
@@ -1608,7 +1608,7 @@ function tickAlgoritmo(e) {
      DURANTE REP: accumula campioni e integra
   ══════════════════════════════════════════ */
   S.camp.push(azN);
-  S.campDt.push(dt); // V4.3: traccia dt per-campione (usato per ROM e Durata)
+  S.campDt.push(dt); // : traccia dt per-campione (usato per ROM e Durata)
 
   // ── Integrazione trapezoidale con dt reale ──
   const ultimaV = S.vel[S.vel.length - 1];
@@ -1675,7 +1675,7 @@ function tickAlgoritmo(e) {
 
   if (A && B && C) {
     S.inRep = false;
-    S.lastRepEndT = performance.now(); // V4.3: avvia periodo refrattario
+    S.lastRepEndT = performance.now(); // : avvia periodo refrattario
     tickAlgoritmo._quietCont = 0;
     tickAlgoritmo._preRep    = 0;
     tickAlgoritmo._decCont   = 0;
@@ -1683,7 +1683,7 @@ function tickAlgoritmo(e) {
     calcolaRep();
     S.camp   = [];
     S.vel    = [];
-    S.campDt = [];    // V4.3
+    S.campDt = [];    // 
     S.vPiccoInRep = 0;
     return;
   }
@@ -1691,14 +1691,14 @@ function tickAlgoritmo(e) {
   /* Sicurezza: rep troppo lunga (>350 campioni ≈ 7s) → forza fine */
   if (S.vel.length > 350) {
     S.inRep = false;
-    S.lastRepEndT = performance.now(); // V4.3: avvia periodo refrattario
+    S.lastRepEndT = performance.now(); // : avvia periodo refrattario
     tickAlgoritmo._quietCont = 0;
     tickAlgoritmo._decCont   = 0;
     tickAlgoritmo._quietPost = 0;
     calcolaRep();
     S.camp   = [];
     S.vel    = [];
-    S.campDt = [];    // V4.3
+    S.campDt = [];    // 
     S.vPiccoInRep = 0;
   }
 }
@@ -1735,7 +1735,7 @@ function calcolaRep() {
   if (S.repN === 1) S.vRef = S.vMedia;
   S.vLoss = S.vRef > 0 ? (1 - S.vMedia / S.vRef) * 100 : 0;
 
-  /* ── V4.3: metriche Vbt Training-compatibili ────────────────────────────
+  /* ── : metriche Vbt Training-compatibili ────────────────────────────
      Calcolate sull'intero array S.vel (campioni durante rep) con dt da S.campDt
   ─────────────────────────────────────────────────────────────────── */
 
@@ -1793,7 +1793,7 @@ function calcolaRep() {
   } else {
     S.stima1RM = 0;
   }
-  /* ── Fine V4.3 metriche ───────────────────────────────────────── */
+  /* ── Fine  metriche ───────────────────────────────────────── */
 
   // Aggiorna display
   document.getElementById('numRep').textContent  = S.repN;
@@ -1823,21 +1823,18 @@ function valutaSoglia() {
   if (v >= S.sogTgt) {
     zona = 'verde';
     document.getElementById('tagStatus').textContent = '✅ TARGET RAGGIUNTO';
-    // nessun beep
-    parla('Target raggiunto' + S.vMedia.toFixed(2));
+    beep(880, 100, 0.5); // Nota La5: molto nitido e veloce
   } else if (v >= S.sogMin) {
     zona = 'orange';
     document.getElementById('tagStatus').textContent = '⚠️ SOTTO TARGET';
-    //beep(660, 200, .5);
     beepDoppio();
   } else {
     zona = 'rossa';
     document.getElementById('tagStatus').textContent = '🔴 SOTTO SOGLIA · 🚨 Vel.anomala';
-     parla('Sei sottosoglia'+ S.vMedia.toFixed(2));
-    beepDoppio();
+    beep(659, 100, 0.5); // Nota più alta (Mi5)
+    setTimeout(() => { beep(494, 150, 0.5); }, 120); // Nota più bassa (Si4)
     vibra(500);
   }
-
   // overlay anomalia velocità — mostra avviso se valore fuori curva
   if (S._ultimaCoerenza && !S._ultimaCoerenza.ok) {
     const tagEl = document.getElementById('tagStatus');
