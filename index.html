@@ -76,8 +76,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);min-heigh
 .btn-cal{background:var(--card);color:var(--text);border:1px solid var(--border);}
 .btn-go{background:var(--green);color:#000;}
 .btn-stop{background:var(--red);color:#fff;}
-.btn-row2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
-.btn-save{background:var(--card);color:var(--text);border:1px solid var(--border);}
+.btn-row2{display:grid;grid-template-columns:1fr;gap:8px;}
 .btn-csv{background:var(--blue);color:#fff;}
 
 /* ── ASSE SELECTOR ── */
@@ -124,17 +123,20 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);min-heigh
 
 /* ── REP LIST ── */
 .rep-list{display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto;}
-.rep-row{display:flex;align-items:center;gap:10px;padding:8px 10px;
+.rep-row{display:grid;grid-template-columns:40px 72px 1fr auto;align-items:center;
+  gap:6px 8px;padding:7px 10px;
   background:var(--surface);border-radius:var(--r-sm);border-left:3px solid transparent;}
 .rep-row.verde{border-left-color:var(--green);}
 .rep-row.orange{border-left-color:var(--orange);}
 .rep-row.rossa{border-left-color:var(--red);}
-.rep-n{font-size:11px;color:var(--muted);font-family:var(--font-data);min-width:38px;}
-.rep-v{font-size:16px;font-weight:700;font-family:var(--font-data);flex:1;}
+.rep-n{font-size:11px;color:var(--muted);font-family:var(--font-data);white-space:nowrap;}
+.rep-v{font-size:15px;font-weight:700;font-family:var(--font-data);white-space:nowrap;}
 .rep-v.verde{color:var(--green);}
 .rep-v.orange{color:var(--orange);}
 .rep-v.rossa{color:var(--red);}
-.rep-meta{font-size:11px;color:var(--muted);font-family:var(--font-data);}
+.rep-meta{font-size:11px;color:var(--muted);font-family:var(--font-data);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;}
+.rep-icons{display:flex;gap:2px;font-size:13px;line-height:1;white-space:nowrap;}
 .empty{text-align:center;padding:20px;color:var(--dim);font-size:13px;}
 
 /* ── DIAGNOSTICA ── */
@@ -417,8 +419,7 @@ html[data-theme="dark"] .app,html[data-theme="dark"] .card,html[data-theme="dark
 
   <!-- PULSANTI DATI -->
   <div class="btn-row2" id="dataRow" style="display:none">
-    <button class="btn btn-save" onclick="salva()">💾 Salva sessione</button>
-    <button class="btn btn-csv"  onclick="esportaCSV()">📤 Esporta CSV</button>
+    <button class="btn btn-csv" onclick="esportaCSV()">📤 Esporta CSV</button>
   </div>
 
 </div>
@@ -1634,17 +1635,19 @@ function tickAlgoritmo(e) {
     tickAlgoritmo._quietCont = 0;
   }
 
-  // ── Cap fisico di plausibilità ──
-  // Il cap adattivo da tabella (getVCapByPct) si applica SOLO se l'utente
-  // ha inserito un carico reale (> 0): in quel caso il %1RM è significativo
-  // e la tabella riflette la curva forza-velocità attesa.
-  // Se carico = 0 (sessione senza carico o campo non compilato) si usa il
-  // solo hard-cap fisico 2.0 m/s, evitando che il default pct=75 imponga
-  // un ceiling artificiale di ~1.02 m/s che falsa il Peak Velocity.
-  const _caricoAttuale = parseFloat(document.getElementById('inCarico')?.value) || 0;
-  const V_CAP = _caricoAttuale > 0 ? getVCapByPct(S.pct1RM || 75) : 2.0;
-  if (nuovaV > V_CAP) nuovaV = V_CAP;
-  if (nuovaV < 0)     nuovaV = 0;
+  // ── Cap fisico di plausibilità (hard-cap anti-drift) ──
+  // NOTA v4.5.1: il cap adattivo da curva forza-velocità (getVCapByPct)
+  // è stato rimosso dal tick intra-rep perché troncava ogni campione al
+  // soffitto della tabella, producendo un Peak Velocity costantemente
+  // uguale al V_CAP (es. 0.88 m/s con pct=81%) indipendentemente dalla
+  // velocità reale di esecuzione.
+  // Rimane solo il hard-cap fisico 2.0 m/s per bloccare il drift di
+  // integrazione in caso di accelerometro instabile.
+  // La validazione di coerenza con la curva forza-velocità avviene
+  // a posteriori in calcolaRep() tramite validaCoerenza(), che non
+  // modifica i valori ma emette solo un feedback informativo.
+  if (nuovaV > 2.0) nuovaV = 2.0;
+  if (nuovaV < 0)   nuovaV = 0;
 
   S.vel.push(nuovaV);
   _diagVel = nuovaV; // V4.5: aggiorna diagnostica livello 3
@@ -1884,9 +1887,9 @@ function aggiornaRepList(zona) {
     S.repLog.slice().reverse().map(r =>
       `<div class="rep-row ${r.zona}">
         <span class="rep-n">REP ${r.n}</span>
-        <span class="rep-v ${r.zona}">${r.vM.toFixed(2)} m/s</span>
+        <span class="rep-v ${r.zona}">${r.vM.toFixed(2)}<br><small style="font-size:9px;font-weight:400;color:var(--muted)">m/s</small></span>
         <span class="rep-meta">↑${r.vP.toFixed(2)} · ${r.rom.toFixed(0)}cm · ${r.pw > 0 ? r.pw.toFixed(0)+'W' : '—'} · −${r.loss.toFixed(1)}%</span>
-        <span>${r.zona==='verde'?'✅':r.zona==='orange'?'⚠️':'🔴'}${r.anomalia?' 🚨':''}</span>
+        <span class="rep-icons">${r.zona==='verde'?'✅':r.zona==='orange'?'⚠️':'🔴'}${r.anomalia?'<span style="font-size:11px">🚨</span>':''}</span>
        </div>`
     ).join('');
 }
@@ -1942,13 +1945,6 @@ function logRep() {
   });
 }
 
-function salva() {
-  if (!S.storico.length) { toast('⚠️ Nessun dato'); return; }
-  try {
-    localStorage.setItem('vbt_'+Date.now(), JSON.stringify(S.storico));
-    toast(`✅ Salvato (${S.repN} rep)`);
-  } catch(e) { toast('❌ Errore salvataggio'); }
-}
 
 /* Esporta CSV senza colonna Email */
 function esportaCSV() {
