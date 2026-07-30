@@ -6,7 +6,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0a0a0f">
-<title>VBT Training Smart</title>
+<title>VBT Training Smart v4.6</title>
 <style>
 :root {
   --bg:#0a0a0f; --surface:#12121a; --card:#1a1a28; --border:#2a2a3f;
@@ -288,6 +288,26 @@ html[data-theme="dark"] .app,html[data-theme="dark"] .card,html[data-theme="dark
       </div>
     </div>
 
+    <!-- SOGLIA VELOCITY LOSS (configurabile) -->
+    <div class="field" style="margin-bottom:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:0;">
+        <label style="font-size:10px;font-weight:600;color:var(--orange);margin:0">🔻 SOGLIA VL STOP SET (%)</label>
+        <button type="button" id="helpVLBtn" aria-label="Info soglia VL" style="border:none;background:var(--orange);color:#fff;width:22px;height:22px;border-radius:50%;font-weight:700;cursor:pointer;line-height:1;flex:0 0 auto;font-size:12px">?</button>
+      </div>
+      <select id="selVLSoglia" style="background:var(--surface);border:1px solid var(--border);
+              color:var(--text);border-radius:var(--r-sm);padding:6px 10px;font-size:14px;
+              font-family:var(--font-data);font-weight:600;width:100%;margin-top:4px">
+        <option value="20">20% — Potenza / Esplosività</option>
+        <option value="25" selected>25% — Default (equilibrio)</option>
+        <option value="30">30% — Forza / Ipertrofia squat</option>
+        <option value="35">35% — Ipertrofia panca / ipertrofia</option>
+        <option value="40">40% — Volume / Fatica massimale</option>
+      </select>
+      <div style="font-size:9px;color:var(--muted);margin-top:3px">
+        Pareja-Blanco (2017): ≤20% per potenza · 30-35% per forza/ipertrofia
+      </div>
+    </div>
+
     <!-- SELEZIONE ASSE -->
     <div class="field" style="margin-bottom:10px">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
@@ -315,6 +335,9 @@ html[data-theme="dark"] .app,html[data-theme="dark"] .card,html[data-theme="dark
       <div class="vel-num" id="numVel">—</div>
       <div class="vel-unit">m/s · velocità media</div>
       <div class="status-tag" id="tagStatus">In attesa</div>
+      <div id="vZonaBadge" style="display:none;margin-top:6px;font-size:10px;font-weight:700;
+           letter-spacing:1.2px;text-transform:uppercase;padding:3px 8px;border-radius:4px;
+           background:var(--dim);color:var(--text)">—</div>
     </div>
 
     <!-- SIGNAL PIPELINE: 3 livelli raw / filtrato / velocità (V4.5) -->
@@ -383,7 +406,7 @@ html[data-theme="dark"] .app,html[data-theme="dark"] .card,html[data-theme="dark
       <!-- : riepilogo aggregato per serie -->
       <div id="setSummary" style="display:none;background:var(--surface);border-radius:var(--r-sm);
            padding:10px 12px;margin-bottom:10px;font-family:var(--font-data);font-size:11px;
-           display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;"></div>
+           display:grid;grid-template-columns:repeat(4,1fr);gap:6px;"></div>
       <div class="rep-list" id="repList">
         <div class="empty">Nessuna ripetizione ancora</div>
       </div>
@@ -566,6 +589,19 @@ html[data-theme="dark"] .app,html[data-theme="dark"] .card,html[data-theme="dark
     </div>
   </div>
 </div>
+<div id="helpVLModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:2000;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;max-width:440px;width:100%;padding:18px;box-shadow:0 20px 60px rgba(0,0,0,.45);max-height:90vh;overflow-y:auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;">
+      <div style="font-size:15px;font-weight:700;color:var(--text);" id="helpVLTitle">Soglia VL Stop</div>
+      <button type="button" id="helpVLClose" style="border:none;background:transparent;color:var(--muted);font-size:22px;line-height:1;cursor:pointer;">×</button>
+    </div>
+    <div id="helpVLBody" style="font-size:13px;line-height:1.65;color:var(--text);"></div>
+    <div style="margin-top:16px;display:flex;justify-content:flex-end;">
+      <button type="button" id="helpVLOk" style="border:none;background:var(--orange);color:#fff;border-radius:10px;padding:10px 16px;font-weight:600;cursor:pointer;">Chiudi</button>
+    </div>
+  </div>
+</div>
+
 <script>
 document.addEventListener('DOMContentLoaded',()=>{const b=document.getElementById('helpAsseBtn'),m=document.getElementById('helpAsseModal'),c=()=>{if(m)m.style.display='none'},o=()=>{if(m)m.style.display='flex'};if(b)b.addEventListener('click',o);['helpAsseClose','helpAsseOk'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('click',c)});if(m)m.addEventListener('click',e=>{if(e.target===m)c()});document.addEventListener('keydown',e=>{if(e.key==='Escape')c()});
   /* ── helper Metriche ── */
@@ -582,6 +618,80 @@ document.addEventListener('DOMContentLoaded',()=>{const b=document.getElementByI
   if(bS)bS.addEventListener('click',oS);
   ['helpSoglieClose','helpSoglieOk'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('click',cS)});
   if(mS)mS.addEventListener('click',e=>{if(e.target===mS)cS()});
+
+  /* ── helper VL Stop ── */
+  const VL_INFO = {
+    '20': {
+      title: '20% — Potenza / Esplosività',
+      color: '#22c55e',
+      icon: '⚡',
+      body: `<p style="margin:0 0 10px 0;"><strong>Obiettivo:</strong> Preservare la qualità neuromuscolare in ogni ripetizione. Priorità all'esplosività: il set si ferma prima che la fatica degradi il pattern motorio.</p>
+<p style="margin:0 0 10px 0;"><strong>Meccanismo:</strong> La VL è calcolata rispetto alla velocità della <strong>prima rep della serie corrente</strong> (vRef). Quando la velocità media di una rep scende del 20% rispetto a vRef, il set si interrompe automaticamente — indipendentemente dal carico assoluto e dalla zona di velocità in cui si lavora.</p>
+<p style="margin:0 0 10px 0;"><strong>Riferimento scientifico:</strong> Pareja-Blanco et al. (2017) dimostrano nel back squat che VL≤20% produce guadagni di forza comparabili a VL40%, con volume nettamente inferiore, ma con un miglioramento del CMJ superiore (+9.5% vs +3.5%). Indica che il SNC rimane fresco e il profilo forza-velocità ad alta velocità viene preservato.</p>
+<p style="margin:0 0 10px 0;"><strong>Quando usarla:</strong> Fasi di potenza, conversione forza-velocità, periodi pre-gara. Compatibile con qualsiasi carico: anche a 85% 1RM il 20% VL garantisce che le rep rimangano di qualità neuromuscolare elevata.</p>
+<p style="margin:0;color:var(--muted);font-size:11px;">Recupero consigliato tra le serie: 3–5 min. Il volume totale per serie sarà basso (tipicamente 3–5 rep) — è nella natura di questa soglia.</p>`
+    },
+    '25': {
+      title: '25% — Default (Equilibrio)',
+      color: '#f59e0b',
+      icon: '⚖️',
+      body: `<p style="margin:0 0 10px 0;"><strong>Obiettivo:</strong> Compromesso bilanciato tra volume di lavoro e qualità neuromuscolare. Soglia di uso generale, adatta alla maggior parte delle sessioni di forza.</p>
+<p style="margin:0 0 10px 0;"><strong>Meccanismo:</strong> La VL è calcolata rispetto alla velocità della <strong>prima rep della serie corrente</strong> (vRef). Il set si interrompe quando una rep scende del 25% rispetto a vRef. È una convenzione pratica ampiamente diffusa nel VBT, non un valore derivato da un singolo studio — rappresenta il punto in cui il decremento di velocità segnala un accumulo di fatica neuromuscolare rilevante senza ancora raggiungere soglie metaboliche critiche.</p>
+<p style="margin:0 0 10px 0;"><strong>Riferimento scientifico:</strong> Gonzalez-Badillo & Sanchez-Medina (2011) correlano la perdita progressiva di velocità con l'aumento di lattato e ammoniaca ematica (r>0.95), confermando che la VL è un indicatore oggettivo e continuo di fatica — non una percezione soggettiva.</p>
+<p style="margin:0 0 10px 0;"><strong>Velocity Zones (Mann 2016):</strong> Compatibile con la zona <em>Forza Accelerativa</em> (0.75–1.0 m/s, 70–80% 1RM) e <em>Forza Assoluta</em> (0.5–0.75 m/s, 80–90% 1RM).</p>
+<p style="margin:0;color:var(--muted);font-size:11px;">Indicato per sessioni di forza con carichi 70–85% 1RM. Recupero consigliato: 2–4 min.</p>`
+    },
+    '30': {
+      title: '30% — Forza / Ipertrofia Squat',
+      color: '#3b82f6',
+      icon: '💪',
+      body: `<p style="margin:0 0 10px 0;"><strong>Obiettivo:</strong> Sviluppo della forza massima e ipertrofia degli arti inferiori. Permette maggior volume intra-set accettando una caduta di velocità più ampia.</p>
+<p style="margin:0 0 10px 0;"><strong>Riferimento scientifico:</strong> Pareja-Blanco et al. (2017) identificano la soglia del 30% come limite massimo di VL nel back squat per ottenere adattamenti di forza senza compromettere eccessivamente il recupero. Oltre questa soglia aumentano lattato e ammoniaca ematica (Sanchez-Medina & Gonzalez-Badillo, 2011).</p>
+<p style="margin:0 0 10px 0;"><strong>Velocity Zones (Mann 2016):</strong> Zona <em>Forza Assoluta</em> (0.5–0.75 m/s, 80–90% 1RM).</p>
+<p style="margin:0;color:var(--muted);font-size:11px;">Indicato per fasi di forza massima con carichi 80–90% 1RM. Recupero consigliato: 3–5 min. Non usare per esercizi di potenza.</p>`
+    },
+    '35': {
+      title: '35% — Ipertrofia / Panca',
+      color: '#8b5cf6',
+      icon: '🏋️',
+      body: `<p style="margin:0 0 10px 0;"><strong>Obiettivo:</strong> Ipertrofia muscolare con accumulo di volume e fatica metabolica elevata. Indicato in particolare per esercizi degli arti superiori (panca piana, military press) dove la tolleranza alla fatica intra-set è fisiologicamente maggiore rispetto agli esercizi degli arti inferiori.</p>
+<p style="margin:0 0 10px 0;"><strong>Meccanismo:</strong> La VL è calcolata rispetto alla velocità della <strong>prima rep della serie corrente</strong> (vRef). Il set si ferma quando una rep scende del 35% rispetto a vRef. Permette un numero di rep più elevato per serie, aumentando il tempo sotto tensione e lo stress metabolico — fattori chiave per l'ipertrofia.</p>
+<p style="margin:0 0 10px 0;"><strong>Riferimento scientifico:</strong> Pareja-Blanco et al. (2017) studiano VL20% vs VL40% nel back squat. La soglia del 35% per gli arti superiori è una estrapolazione pratica consolidata: gli arti superiori tollerano percentuali di VL più elevate prima di compromettere la qualità tecnica, per via della minore massa muscolare coinvolta e del minor impatto sul SNC. Sanchez-Medina & Gonzalez-Badillo (2011) correlano VL elevate con lattato >8 mmol/L.</p>
+<p style="margin:0 0 10px 0;"><strong>Velocity Zones (Mann 2016):</strong> Compatibile con la zona <em>Forza Accelerativa</em> (0.75–1.0 m/s, 70–80% 1RM) — carichi tipici delle fasi ipertrofiche.</p>
+<p style="margin:0;color:var(--muted);font-size:11px;">Carichi consigliati: 65–80% 1RM. Recupero consigliato: 3–4 min. Non usare in fasi di potenza o prossime alla competizione.</p>`
+    },
+    '40': {
+      title: '40% — Volume / Fatica Massimale',
+      color: '#ef4444',
+      icon: '🔥',
+      body: `<p style="margin:0 0 10px 0;"><strong>Obiettivo:</strong> Massimo accumulo di volume e fatica metabolica. Usato in fasi di ipertrofia avanzata o protocolli specifici ad alta densità.</p>
+<p style="margin:0 0 10px 0;"><strong>Riferimento scientifico:</strong> Pareja-Blanco et al. (2017) dimostrano che il gruppo VL40 ottiene maggiore ipertrofia del vasto laterale rispetto al VL20, ma con guadagni di forza comparabili a fronte di volume molto superiore. Il CMJ (countermovement jump) migliora significativamente meno (+3.5% vs +9.5%), indicando costo neuromuscolare elevato.</p>
+<p style="margin:0 0 10px 0;"><strong>Attenzione:</strong> Sanchez-Medina & Gonzalez-Badillo (2011) correlano VL >35–40% con picchi di ammoniaca ematica significativamente sopra il riposo. Usare con recupero completo e non in fasi prossime alla competizione.</p>
+<p style="margin:0;color:var(--muted);font-size:11px;">Solo per atleti esperti in fasi di volume pianificato. Recupero consigliato: 5+ min. Non usare in periodi di picco o tapering.</p>`
+    }
+  };
+
+  const bVL = document.getElementById('helpVLBtn');
+  const mVL = document.getElementById('helpVLModal');
+  const cVL = () => { if(mVL) mVL.style.display='none'; };
+  const oVL = () => {
+    if(!mVL) return;
+    const sel = document.getElementById('selVLSoglia');
+    const key = sel ? sel.value : '25';
+    const info = VL_INFO[key] || VL_INFO['25'];
+    document.getElementById('helpVLTitle').innerHTML =
+      '<span style="margin-right:6px">' + info.icon + '</span>' + info.title;
+    document.getElementById('helpVLTitle').style.color = info.color;
+    document.getElementById('helpVLBody').innerHTML = info.body;
+    document.getElementById('helpVLOk').style.background = info.color;
+    mVL.style.display = 'flex';
+  };
+  if(bVL) bVL.addEventListener('click', oVL);
+  ['helpVLClose','helpVLOk'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.addEventListener('click', cVL);
+  });
+  if(mVL) mVL.addEventListener('click', e => { if(e.target===mVL) cVL(); });
 
   /* ── init UI ── */
   setAsse('auto');
@@ -712,6 +822,50 @@ function beep(f=880, ms=180, v=0.55) {
   } catch(e){}
 }
 function beepDoppio() { beep(880,160,.7); setTimeout(()=>beep(660,200,.8), 230); }
+
+/* beepWarn — avviso avvicinamento soglia VL (zona gialla ~70% della soglia)
+   Tono singolo secco, sawtooth, percepibile ma non allarmante */
+function beepWarn() {
+  try {
+    initAudio();
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.connect(g); g.connect(actx.destination);
+    o.type = 'square';
+    o.frequency.value = 780;
+    const t = actx.currentTime;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.75, t + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+    o.start(t); o.stop(t + 0.17);
+  } catch(e) {}
+}
+
+/* beepAlert — superamento soglia VL: due toni discendenti forti + vibrazione
+   Sawtooth massimo volume, pattern riconoscibile come "allarme" */
+function beepAlert() {
+  try {
+    initAudio();
+    // Primo tono: acuto, forte
+    const o1 = actx.createOscillator(), g1 = actx.createGain();
+    o1.connect(g1); g1.connect(actx.destination);
+    o1.type = 'sawtooth'; o1.frequency.value = 960;
+    const t = actx.currentTime;
+    g1.gain.setValueAtTime(0, t);
+    g1.gain.linearRampToValueAtTime(1.0, t + 0.006);
+    g1.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+    o1.start(t); o1.stop(t + 0.18);
+    // Secondo tono: più basso, 160ms dopo — pattern discendente
+    const o2 = actx.createOscillator(), g2 = actx.createGain();
+    o2.connect(g2); g2.connect(actx.destination);
+    o2.type = 'sawtooth'; o2.frequency.value = 620;
+    g2.gain.setValueAtTime(0, t + 0.16);
+    g2.gain.linearRampToValueAtTime(0.95, t + 0.168);
+    g2.gain.exponentialRampToValueAtTime(0.001, t + 0.36);
+    o2.start(t + 0.16); o2.stop(t + 0.42);
+  } catch(e) {}
+  // Vibrazione: pattern breve-lunga per distinguerlo da altri feedback
+  vibra([80, 60, 200]);
+}
 function vibra(ms=400){ try{ navigator.vibrate && navigator.vibrate(ms); }catch(e){} }
 
 /* ═══════════════════════════════════════════════
@@ -1288,6 +1442,26 @@ function getAzNetto() {
 ═══════════════════════════════════════════════ */
 function avvia() {
   if (!S.calibrato) { toast('⚠️ Prima calibra'); return; }
+  // Validazione carico obbligatorio
+  const _caricoEl = document.getElementById('inCarico');
+  const _caricoVal = parseFloat(_caricoEl?.value);
+  if (!_caricoEl || !_caricoVal || _caricoVal <= 0) {
+    if (_caricoEl) {
+      _caricoEl.style.outline = '2px solid #ef4444';
+      _caricoEl.style.borderColor = '#ef4444';
+      _caricoEl.style.boxShadow = '0 0 0 3px rgba(239,68,68,0.25)';
+      _caricoEl.focus();
+      // Rimuove il bordo rosso appena l'utente inizia a digitare
+      _caricoEl.addEventListener('input', function _resetBorder() {
+        _caricoEl.style.outline = '';
+        _caricoEl.style.borderColor = '';
+        _caricoEl.style.boxShadow = '';
+        _caricoEl.removeEventListener('input', _resetBorder);
+      });
+    }
+    toast('⚠️ Inserisci il carico (kg)');
+    return;
+  }
   leggiSoglie();
   initAudio();
 
@@ -1307,6 +1481,7 @@ function avvia() {
   // : reset metriche Vbt Training
   S.romCm = 0; S.durMs = 0; S.tPiccoMs = 0;
   S.meanPowerW = 0; S.accelIdx = 0; S.stima1RM = 0;
+  S._vlWarned = false;  // reset avviso VL per nuova serie
   _azLPF = 0;   // reset filtro IIR all'avvio serie
   // Reset contatori interni tick
   tickAlgoritmo._preRep     = 0;
@@ -1389,7 +1564,8 @@ function aggiornaSetSummary() {
     cell('Loss%',   S.vLoss.toFixed(1)+'%',     S.vLoss > 20 ? 'var(--red)' : 'var(--green)') +
     cell('ROM med', avg(roms).toFixed(0)+' cm',  'var(--text)') +
     cell('Potenza', pWs[0]>0 ? avg(pWs).toFixed(0)+' W' : '—', 'var(--orange)') +
-    cell('1RM stim', S.stima1RM > 0 ? S.stima1RM.toFixed(0)+' kg' : '—', 'var(--text)');
+    cell('1RM stim', S.stima1RM > 0 ? S.stima1RM.toFixed(0)+' kg' : '—', 'var(--text)') +
+    cell('Zona VBT', (() => { const z = getVelocityZone(avg(vMs)); return z.short; })(), (() => { const z = getVelocityZone(avg(vMs)); return z.color; })());
 }
 
 /* ═══════════════════════════════════════════════
@@ -1709,6 +1885,29 @@ function tickAlgoritmo(e) {
 /* ═══════════════════════════════════════════════
    CALCOLA METRICHE REP
 ═══════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════
+   VELOCITY ZONES - Mann (2016) / Gonzalez-Badillo (2010)
+   Mappatura velocità media → zona forza-velocità
+══════════════════════════════════════════════════ */
+function getVelocityZone(v) {
+  if (v >= 1.3)  return { name: 'Speed-Strength',   short: 'SPEED-STR',  color: '#22c55e', pct: '30-40%' };
+  if (v >= 1.0)  return { name: 'Strength-Speed',   short: 'STR-SPEED',  color: '#3b82f6', pct: '50-60%' };
+  if (v >= 0.75) return { name: 'Forza Accelerativa', short: 'ACC.STR',  color: '#f59e0b', pct: '70-80%' };
+  if (v >= 0.5)  return { name: 'Forza Assoluta',   short: 'ABS.STR',    color: '#ef4444', pct: '80-90%' };
+  return           { name: 'Massimale',              short: 'MAX',        color: '#dc2626', pct: '90-100%' };
+}
+
+function aggiornaVZonaBadge(v) {
+  const badge = document.getElementById('vZonaBadge');
+  if (!badge || !v || v <= 0) { if (badge) badge.style.display = 'none'; return; }
+  const z = getVelocityZone(v);
+  badge.textContent = z.short + ' · ' + z.pct + ' 1RM · ' + z.name;
+  badge.style.background = z.color + '22'; // 13% opacity
+  badge.style.color = z.color;
+  badge.style.border = '1px solid ' + z.color + '66';
+  badge.style.display = 'inline-block';
+}
+
 function calcolaRep() {
   if (S.vel.length < 5) return; // rep troppo corta → scarta
 
@@ -1779,20 +1978,40 @@ function calcolaRep() {
     ? parseFloat((kg * 9.81 * S.vMedia).toFixed(2))
     : 0;
 
-  // Stima 1RM (kg): metodo Jidovtseff-VBT (v0 da curva + regressione lineare)
-  // Approssimazione con tabella VBT_1RM già presente: 1RM = carico / pct * 100
-  // Integrata con correzione velocità: se vMedia < atteso → carico percepito > dichiarato
-  // Formula semplificata: 1RM_stimato = carico * (1 + repN / 30)  [Epley modificata]
-  // Per VBT monorep si usa: 1RM = carico / (1.0278 - 0.0278 * vMediaNorm)
-  // dove vMediaNorm = vMedia / v1RM_ref (v a 1RM ≈ 0.17 m/s per squat)
+  // Stima 1RM (kg): metodo profilo carico-velocità (Gonzalez-Badillo 2010)
+  // Inversione della tabella VBT_1RM: dato vMedia e numero rep,
+  // trova la %1RM corrispondente per interpolazione lineare.
+  // e1RM = carico / (%1RM / 100)
+  // Questo è l'approccio corretto: non dipende da una singola costante MVT.
   if (kg > 0 && S.vMedia > 0) {
-    const v1RM_ref = 0.17; // m/s soglia 1RM per squat/deadlift (adattabile)
-    const ratio = Math.min(S.vMedia / v1RM_ref, 3.0); // clamp per sicurezza
-    // Formola Brzycki-VBT: 1RM = carico / (1.0278 - 0.0278 * ratio)
-    const denom = 1.0278 - 0.0278 * ratio;
-    S.stima1RM = denom > 0.01
-      ? parseFloat((kg / denom).toFixed(2))
-      : parseFloat((kg * 1.35).toFixed(2));
+    const repIdx = Math.max(0, Math.min(5, S.repN - 1));
+    let bestPct = null, bestDiff = Infinity;
+    // Cerca la riga più vicina a vMedia nella tabella
+    for (const row of VBT_1RM) {
+      const v = row.reps[repIdx];
+      if (v === null || v === undefined) continue;
+      const diff = Math.abs(v - S.vMedia);
+      if (diff < bestDiff) { bestDiff = diff; bestPct = row.pct; }
+    }
+    // Interpolazione lineare tra due righe adiacenti
+    if (bestPct !== null) {
+      const rows = VBT_1RM.filter(r => r.reps[repIdx] != null)
+                           .sort((a,b) => a.pct - b.pct);
+      const above = rows.filter(r => r.reps[repIdx] >= S.vMedia); // velocità > vMedia → pct più bassa
+      const below = rows.filter(r => r.reps[repIdx] <  S.vMedia); // velocità < vMedia → pct più alta
+      let pctEst = bestPct;
+      if (above.length && below.length) {
+        const rA = above[above.length-1], rB = below[0];
+        const vA = rA.reps[repIdx], vB = rB.reps[repIdx];
+        const t  = (S.vMedia - vA) / (vB - vA);
+        pctEst   = rA.pct + t * (rB.pct - rA.pct);
+      }
+      // clamp ragionevole: 40-100%
+      pctEst = Math.max(40, Math.min(100, pctEst));
+      S.stima1RM = parseFloat((kg / (pctEst / 100)).toFixed(1));
+    } else {
+      S.stima1RM = 0;
+    }
   } else {
     S.stima1RM = 0;
   }
@@ -1803,13 +2022,40 @@ function calcolaRep() {
   document.getElementById('numVel').textContent  = S.vMedia.toFixed(2);
   document.getElementById('numPicco').textContent= S.vPicco.toFixed(2);
   const lossEl = document.getElementById('numLoss');
+  const _vlThr = parseFloat(document.getElementById('selVLSoglia')?.value || '25');
   lossEl.textContent = S.vLoss.toFixed(1) + '%';
-  lossEl.className   = 'mval ' + (S.vLoss > 20 ? 'bad' : 'ok');
+  lossEl.className   = 'mval ' + (S.vLoss >= _vlThr ? 'bad' : S.vLoss >= _vlThr * 0.7 ? 'warn' : 'ok');
+
+  // Aggiorna badge zona velocità (Mann 2016)
+  aggiornaVZonaBadge(S.vMedia);
 
   // Soglie + feedback
   valutaSoglia();
 
-  // Voce
+  // ── Feedback VL post-rep ─────────────────────────────────────────────
+  const vlSogliaEl = document.getElementById('selVLSoglia');
+  const vlSoglia   = vlSogliaEl ? parseFloat(vlSogliaEl.value) : 25;
+  const vlWarn     = vlSoglia * 0.70; // soglia warning al 70% della soglia configurata
+
+  if (S.repN > 1) {
+    if (S.vLoss >= vlSoglia) {
+      // SOGLIA SUPERATA — beep alert forte + vibrazione, TTS solo alla prima
+      beepAlert();
+      if (!S._vlWarned) {
+        S._vlWarned = true;
+        // TTS ritardato di 500ms per non sovrapporsi al beep
+        setTimeout(() => {
+          parla('Loss ' + S.vLoss.toFixed(0) + ' percento');
+        }, 500);
+      }
+    } else if (S.vLoss >= vlWarn) {
+      // ZONA WARNING — beep breve secco, nessun TTS (veloce e non invasivo)
+      beepWarn();
+    }
+    // Sotto il 70% della soglia: nessun feedback sonoro — rep nella norma
+  }
+
+  // Voce velocità (se desiderato)
   //parla(S.vMedia.toFixed(2) + ' metri al secondo');
 
   // Log
@@ -1901,7 +2147,7 @@ function parla(txt) {
   if (!('speechSynthesis' in window)) return;
   speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(txt);
-  u.lang='it-IT'; u.rate=1.25; u.volume=.9;
+  u.lang='it-IT'; u.rate=1.30; u.volume=.9;
   speechSynthesis.speak(u);
 }
 
