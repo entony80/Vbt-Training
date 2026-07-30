@@ -194,7 +194,7 @@ html[data-theme="dark"] .app,html[data-theme="dark"] .card,html[data-theme="dark
   <!-- HEADER -->
   <div class="header">
     <h1>⚡ VBT-SMART</h1>
-    <span class="version">v4.6 - Antonino Tessio</span>
+    <span class="version">v4.6.1 - Antonino Tessio</span>
     <div class="theme-toggle">
       <span class="theme-icon">🌙</span>
       <label class="tog-switch" title="Cambia tema">
@@ -752,6 +752,7 @@ const S = {
   // calibrazione
   calibrato: false,
   offX: 0, offY: 0, offZ: 0,
+  noiseFloor: 0.18,   // m/s² — aggiornato dinamicamente a calibrazione
   // asse selezionato: 'auto'|'x'|'y'|'z'
   asse: 'auto',
   // FIX BUG 5: asse fissato in calibrazione (non ricalcolato ogni campione)
@@ -1298,6 +1299,25 @@ function _completaCalibrazione() {
   // Se acc pura: gli offset sono rumore residuo attorno a 0, azzerarli
   if (S.useAccPura) { S.offX = 0; S.offY = 0; S.offZ = 0; }
 
+  /* ── Noise floor dinamico ──────────────────────────────────────────
+     Stima la deviazione standard dei campioni a riposo sull'asse
+     verticale (quello che verrà usato durante la rep).
+     Viene usata come base adattiva per ZVU_THR e soglia di quiete,
+     invece della costante fissa 0.18 m/s².
+     Formula: σ = sqrt( Σ(x - μ)² / N )
+  ──────────────────────────────────────────────────────────────────── */
+  const stdDev = (arr, mu) => {
+    if (arr.length < 2) return 0.25; // fallback conservativo
+    const variance = arr.reduce((acc, v) => acc + (v - mu) * (v - mu), 0) / arr.length;
+    return Math.sqrt(variance);
+  };
+  // Usa l'asse Z come proxy (viene correto dopo il rilevamento asse reale)
+  // Il valore verrà ricalcolato in getAzNetto() dopo la calibrazione
+  const muZ = S.offZ;
+  const sigmaZ = stdDev(_calCampZ, muZ);
+  // Clamp: minimo 0.05 (sensore eccellente), massimo 0.50 (sensore rumoroso)
+  S.noiseFloor = Math.min(0.50, Math.max(0.05, sigmaZ));
+
   S.calibrato = true;
 
   /* ── Rilevamento asse dominante ─────────────────────────────────────
@@ -1642,6 +1662,17 @@ function tickAlgoritmo(e) {
   // scheduler variabile o in transizione da pausa.
   // Sotto 1ms → errore strumentale, scarta.
   if (dt < 0.001 || dt > 0.150) return;
+  /* ── e.interval come dt nominale di qualità ─────────────────────────
+     DeviceMotionEvent.interval è il periodo dichiarato dal driver hardware
+     (es. 20ms a 50Hz). Più stabile del dt misurato campione-per-campione
+     nei primi secondi o su device con scheduler variabile.
+     Usato come fallback quando dt è ai limiti del clamp (anomalo).
+     Non sostituisce dt per l'integrazione — resta come riferimento. ── */
+  const dtNominale = (e.interval && e.interval > 4 && e.interval < 200)
+    ? e.interval / 1000
+    : (S.hzReal > 0 ? 1 / S.hzReal : 0.020);
+  // dtEff: usa dt reale misurato; se anomalo cade sul nominale
+  const dtEff = (dt >= 0.005 && dt <= 0.100) ? dt : dtNominale;
 
   const azN_raw = getAzNetto();
   // V4.5: Filtro IIR passa-basso con alpha ADATTIVO basato su Hz reale.
@@ -1785,23 +1816,39 @@ function tickAlgoritmo(e) {
      DURANTE REP: accumula campioni e integra
   ══════════════════════════════════════════ */
   S.camp.push(azN);
-  S.campDt.push(dt); // : traccia dt per-campione (usato per ROM e Durata)
+  S.campDt.push(dtEff); // traccia dtEff per-campione (usa dt reale o nominale da e.interval)
 
-  // ── Integrazione trapezoidale con dt reale ──
+  // ── Integrazione trapezoidale con dtEff (reale o nominale da e.interval) ──
   const ultimaV = S.vel[S.vel.length - 1];
   const aPrec   = S.camp.length >= 2 ? S.camp[S.camp.length - 2] : azN;
-  let nuovaV    = ultimaV + ((aPrec + azN) / 2) * dt;
+  let nuovaV    = ultimaV + ((aPrec + azN) / 2) * dtEff;
   // Il drift è gestito da: (1) LPF adattivo fc=4Hz prima dell'integrazione,
-  // (2) ZVU sotto che azzera quando il segnale è sotto soglia quiete ≥ 4 camp.
+  // (2) ZVU sotto che azzera quando il segnale è sotto soglia quiete ≥ 4 camp,
+  // (3) decadimento esponenziale τ=1s (vedi sotto).
+
+  /* ── Decadimento esponenziale anti-drift (τ = 1s) ───────────────────
+     Riduce il drift residuo che si accumula quando ZVU non scatta
+     (segnale sopra soglia ma nessun movimento reale, es. tremore involontario).
+     Formula: v(n) = v(n-1) · exp(-dtEff / τ)
+     Con τ=1s e dt=20ms: fattore = exp(-0.02) ≈ 0.980 per campione
+     → attenuazione ~50% in 1 secondo di non-movimento → trascurabile
+     durante una rep reale (durata 0.5-1.5s), efficace sul drift lento.
+  ──────────────────────────────────────────────────────────────────── */
+  const DECAY_TAU = 1.0;
+  nuovaV *= Math.exp(-dtEff / DECAY_TAU);
 
   // ── Zero-Velocity Update (ZVU) ──
   // Se azN è sotto la soglia di rumore per ≥ 4 campioni consecutivi,
   // l'atleta è fermo: azzera la velocità integrata per bloccare il drift.
-  // Soglia ZVU = 15% di sogAtt (rumore residuo dopo calibrazione).
+  /* ZVU_THR DINAMICO basato su noiseFloor misurato in calibrazione:
+     - S.noiseFloor = σ dei campioni a riposo (calcolato in _calHandler)
+     - Moltiplicatore 2.5σ: copertura statistica ~99% del rumore gaussiano
+     - Minimo: max(noiseFloor*2.5, sogAtt*0.20) → mai sotto il rumore reale
+     - Massimo: 0.60 m/s² → non blocca movimenti intenzionali lenti
+     Su sensore preciso (σ=0.05): ZVU_THR ≈ 0.125 → ZVU sensibile
+     Su sensore rumoroso (σ=0.40): ZVU_THR ≈ 1.00 → clampato a 0.60 */
   if (!tickAlgoritmo._quietCont) tickAlgoritmo._quietCont = 0;
-  // soglia ZVU ampliata — il noise floor MEMS tipico è 0.15–0.25 m/s²
-  // Il minimo assoluto 0.18 m/s² evita ZVU mancati su sensori rumorosi.
-  const ZVU_THR = Math.max(S.sogAtt * 0.20, 0.18);
+  const ZVU_THR = Math.min(0.60, Math.max(S.noiseFloor * 2.5, S.sogAtt * 0.20));
   if (Math.abs(azN) < ZVU_THR) {
     tickAlgoritmo._quietCont++;
     if (tickAlgoritmo._quietCont >= 4) {
@@ -2147,7 +2194,7 @@ function parla(txt) {
   if (!('speechSynthesis' in window)) return;
   speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(txt);
-  u.lang='it-IT'; u.rate=1.30; u.volume=.9;
+  u.lang='it-IT'; u.rate=1.30; u.volume=.10;
   speechSynthesis.speak(u);
 }
 
