@@ -1,12 +1,522 @@
 <!DOCTYPE html>
 <html lang="it">
-<head><style id="body-theme-force">html[data-theme="light"] body{background:#f4f7fb !important;color:#0f172a !important}html[data-theme="dark"] body{background:#0a0a0f !important;color:#e8e8f0 !important}</style>
+<head>
+<meta name="color-scheme" content="light dark">
+<script>
+/* One-time migration: reset theme to 'auto' after forceDark fix (v5.1) */
+(function(){try{if(!localStorage.getItem('vbt_theme_migrated_v51')){localStorage.removeItem('vbt_theme');localStorage.setItem('vbt_theme_migrated_v51','1');}}catch(e){}})();
+
+const AppSettings = {
+  themeMode: (function(){ try { return localStorage.getItem('vbt_theme') || 'auto'; } catch(e){ return 'auto'; } })(),
+  audio: (function(){ try { return localStorage.getItem('vbt_audio') !== 'false'; } catch(e){ return true; } })(),
+  vibe:  (function(){ try { return localStorage.getItem('vbt_vibe') !== 'false'; } catch(e){ return true; } })(),
+  lang:  (function(){ 
+    try { 
+      let l = localStorage.getItem('vbt_lang');
+      if (!l) {
+        l = (navigator.language || navigator.userLanguage || 'en').startsWith('it') ? 'it' : 'en';
+      }
+      return l; 
+    } catch(e){ return 'en'; } 
+  })()
+};
+
+const i18n = {
+  en: {
+    // Header
+    "app_title": "⚡ VBT-SMART",
+    "btn_settings": "⚙️",
+    
+    // Configurazione
+    "config_title": "Configuration",
+    "lbl_athlete": "Athlete",
+    "ph_athlete": "Athlete name",
+    "lbl_exercise": "Exercise",
+    "lbl_1rm": "% 1RM",
+    "lbl_sets": "Sets",
+    "lbl_rep_range": "Ref. Rep",
+    "lbl_load": "Load (kg)",
+    "ph_load": "Enter a load",
+    "lbl_act_thresh": "Act. threshold (m/s²)",
+    "lbl_min_thresh": "🔴 MIN THRESH (m/s)",
+    "lbl_tgt_thresh": "✅ TARGET (m/s)",
+    "lbl_vl_stop": "🔻 VL STOP SET THRESH (%)",
+    "vl_desc": "Pareja-Blanco (2017): ≤20% for power · 30-35% for strength/hypertrophy",
+    "lbl_axis": "Detection axis (choose after cal)",
+    "btn_cal": "⚙️ Calibrate",
+    "btn_go": "▶ Start",
+    "btn_stop": "⏹ Stop",
+    
+    // Live
+    "live_vel_unit": "m/s · average velocity",
+    "tag_waiting": "Waiting",
+    "tag_ready": "Ready",
+    "metric_rep": "REP",
+    "metric_peak": "PEAK V.",
+    "metric_loss": "V.LOSS",
+    "metric_vs_rep1": "vs rep1",
+    "sig_raw": "1 · Raw m/s²",
+    "sig_filt": "2 · Filtered m/s²",
+    "sig_vel": "3 · Integr. vel. m/s",
+    
+    // Storico
+    "hist_title": "Sets History",
+    "hist_empty": "No repetitions yet",
+    
+    // Diag
+    "diag_title": "Sensor Diagnostics",
+    "axis_sel": "SEL. AXIS",
+    "real_hz": "REAL HZ",
+    "pill_ready": "ready",
+    "pill_samples": "samples",
+    "pill_uncal": "uncalibrated",
+    "pill_screen": "🔆 screen: unlocked",
+    
+    // Buttons
+    "btn_save": "💾 Save Session",
+    "btn_csv": "📤 Export CSV",
+    "btn_history": "📚 Sessions History",
+
+    // Settings
+    "set_title": "Settings",
+    "set_theme": "Visual Theme",
+    "set_theme_desc": "App color mode",
+    "set_audio": "Audio Feedback",
+    "set_audio_desc": "Sounds for reps and thresholds",
+    "set_vibe": "Haptic Feedback",
+    "set_vibe_desc": "Tactile alerts",
+    "set_lang": "Language",
+    "set_lang_desc": "App display language",
+    "set_legal": "Legal & Copyright",
+    "set_legal_desc": "Terms of use and licenses",
+    "btn_close": "Save and Close",
+    
+    // Select options
+    "opt_auto": "📱 System Auto",
+    "opt_dark": "🌙 Dark",
+    "opt_light": "☀️ Light",
+    
+    // Toasts
+    "toast_theme": "Theme changed to ",
+    "toast_calibrated": "✅ Calibrated — Axis: ",
+    "toast_cal_auto": "✅ Calibrated — AUTO Axis: ",
+    "toast_err_sens": "❌ Please activate sensor first",
+    "toast_err_cal": "❌ Please calibrate first",
+    "toast_set_started": "✅ Set started",
+    "toast_set_ended": "Set ended: "
+  },
+  it: {
+    "app_title": "⚡ VBT-SMART",
+    "btn_settings": "⚙️",
+    "config_title": "Configurazione",
+    "lbl_athlete": "Atleta",
+    "ph_athlete": "Nome atleta",
+    "lbl_exercise": "Esercizio",
+    "lbl_1rm": "% 1RM",
+    "lbl_sets": "N° Serie",
+    "lbl_rep_range": "Rep rif.",
+    "lbl_load": "Carico (kg)",
+    "ph_load": "Inserisci un carico",
+    "lbl_act_thresh": "Soglia attivazione (m/s²)",
+    "lbl_min_thresh": "🔴 SOGLIA MIN (m/s)",
+    "lbl_tgt_thresh": "✅ TARGET (m/s)",
+    "lbl_vl_stop": "🔻 SOGLIA VL STOP SET (%)",
+    "vl_desc": "Pareja-Blanco (2017): ≤20% per potenza · 30-35% per forza/ipertrofia",
+    "lbl_axis": "Asse rilevamento (scegli dopo calibrazione)",
+    "btn_cal": "⚙️ Calibra",
+    "btn_go": "▶ Avvia",
+    "btn_stop": "⏹ Stop",
+    "live_vel_unit": "m/s · velocità media",
+    "tag_waiting": "In attesa",
+    "tag_ready": "Pronto",
+    "metric_rep": "REP",
+    "metric_peak": "V.PICCO",
+    "metric_loss": "V.LOSS",
+    "metric_vs_rep1": "vs rep1",
+    "sig_raw": "1 · Raw m/s²",
+    "sig_filt": "2 · Filtrato m/s²",
+    "sig_vel": "3 · Vel. integrata m/s",
+    "hist_title": "Storico serie",
+    "hist_empty": "Nessuna ripetizione ancora",
+    "diag_title": "Diagnostica sensore",
+    "axis_sel": "ASSE SEL.",
+    "real_hz": "HZ REALE",
+    "pill_ready": "pronto",
+    "pill_samples": "campioni",
+    "pill_uncal": "non calibrato",
+    "pill_screen": "🔆 schermo: libero",
+    "btn_save": "💾 Salva Sessione",
+    "btn_csv": "📤 Esporta CSV",
+    "btn_history": "📚 Storico Sessioni",
+    "set_title": "Impostazioni",
+    "set_theme": "Tema Visivo",
+    "set_theme_desc": "Modalità colore dell'app",
+    "set_audio": "Feedback Acustico",
+    "set_audio_desc": "Segnali sonori rep e soglia",
+    "set_vibe": "Vibrazione Haptic",
+    "set_vibe_desc": "Feedback tattile su avvisi",
+    "set_lang": "Lingua / Language",
+    "set_lang_desc": "Lingua dell'applicazione",
+    "set_legal": "Note Legali e Copyright",
+    "set_legal_desc": "Termini d'uso e licenze",
+    "btn_close": "Salva e Chiudi",
+    "opt_auto": "📱 Auto Sistema",
+    "opt_dark": "🌙 Scuro",
+    "opt_light": "☀️ Chiaro",
+    "toast_theme": "Tema cambiato in ",
+    "toast_calibrated": "✅ Calibrato — Asse: ",
+    "toast_cal_auto": "✅ Calibrato — AUTO Asse: ",
+    "toast_err_sens": "❌ Prima attiva il sensore",
+    "toast_err_cal": "❌ Prima calibra",
+    "toast_set_started": "✅ Serie avviata",
+    "toast_set_ended": "Serie terminata: "
+  }
+};
+
+function t(key) {
+  return i18n[AppSettings.lang][key] || i18n['en'][key] || key;
+}
+
+function updateLanguage(lang) {
+  AppSettings.lang = lang;
+  try { localStorage.setItem('vbt_lang', lang); } catch(e){}
+  
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (i18n[lang] && i18n[lang][key]) {
+      // Check if it's a placeholder
+      if (el.tagName === 'INPUT' && el.hasAttribute('placeholder')) {
+        el.setAttribute('placeholder', i18n[lang][key]);
+      } else {
+        // Keep child elements (like emojis/icons) if we only update text nodes? 
+        // For simplicity, we assume innerText unless it contains HTML.
+        // If it contains specific structure, we should be careful.
+        // Actually, innerHTML is fine if we put the emoji inside the translation string.
+        el.innerHTML = i18n[lang][key];
+      }
+    }
+  });
+}
+
+
+function getEffectiveTheme(mode) {
+  if (mode === 'light') return 'light';
+  if (mode === 'dark') return 'dark';
+  // AUTO: detect system theme via native Android bridge (reliable)
+  try {
+    if (typeof Android !== 'undefined' && Android.getSystemTheme) {
+      return Android.getSystemTheme();
+    }
+  } catch(e){}
+  // Fallback to media query (unreliable in WebView but works in browsers)
+  return (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+}
+
+function applyThemeMode(mode) {
+  AppSettings.themeMode = mode;
+  try { localStorage.setItem('vbt_theme', mode); } catch(e){}
+  const effectiveTheme = getEffectiveTheme(mode);
+  document.documentElement.setAttribute('data-theme', effectiveTheme);
+  const mc = document.querySelector('meta[name="theme-color"]');
+  if(mc) mc.content = (effectiveTheme === 'light') ? '#f0f2f7' : '#0a0a0f';
+  const sel = document.getElementById('themeSelectMode');
+  if(sel) sel.value = mode;
+}
+
+/* Called by native Android after page load to apply correct system theme */
+window._applyNativeSystemTheme = function(isDark) {
+  if (AppSettings.themeMode === 'auto') {
+    var theme = isDark ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', theme);
+    var mc = document.querySelector('meta[name="theme-color"]');
+    if(mc) mc.content = (theme === 'light') ? '#f0f2f7' : '#0a0a0f';
+  }
+};
+
+function isAudioEnabled() {
+  const el = document.getElementById('audioToggle');
+  return el ? el.checked : AppSettings.audio;
+}
+
+function isVibeEnabled() {
+  const el = document.getElementById('vibeToggle');
+  return el ? el.checked : AppSettings.vibe;
+}
+
+/* MATERIAL DESIGN 3 PICKER MODAL POPUP FOR ALL COMBOBOXES */
+function openM3Picker(selectEl, titleText = 'Seleziona Opzione') {
+  if (!selectEl) return;
+  const modal = document.getElementById('m3PickerModal');
+  const title = document.getElementById('m3PickerTitle');
+  const container = document.getElementById('m3PickerOptions');
+  const closeBtn = document.getElementById('m3PickerClose');
+  if (!modal || !container) return;
+
+  title.innerHTML = '<span>📋</span> ' + titleText;
+  container.innerHTML = '';
+
+  const options = Array.from(selectEl.options);
+  options.forEach(opt => {
+    const item = document.createElement('div');
+    item.className = 'm3-picker-item' + (opt.value === selectEl.value ? ' active' : '');
+    item.innerHTML = '<span>' + opt.text + '</span>' + (opt.value === selectEl.value ? '<span style="font-weight:bold;color:var(--blue);">✓</span>' : '');
+    item.addEventListener('click', () => {
+      selectEl.value = opt.value;
+      selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+      vibra(30);
+      modal.style.display = 'none';
+    });
+    container.appendChild(item);
+  });
+
+  modal.style.display = 'flex';
+
+  const closeFunc = () => { modal.style.display = 'none'; };
+  if (closeBtn) closeBtn.onclick = closeFunc;
+  modal.onclick = (e) => { if (e.target === modal) closeFunc(); };
+}
+
+function setupM3ComboboxPickers() {
+  const comboboxes = [
+    { id: 'selEs', title: 'Seleziona Esercizio' },
+    { id: 'sel1RM', title: 'Seleziona % 1RM' },
+    { id: 'selVLSoglia', title: 'Soglia VL Stop Set (%)' },
+    { id: 'themeSelectMode', title: 'Tema Visivo App' },
+    { id: 'selAsse', title: 'Asse di Rilevamento' }
+  ];
+
+  comboboxes.forEach(cb => {
+    const el = document.getElementById(cb.id);
+    if (el) {
+      el.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        openM3Picker(el, cb.title);
+      });
+      el.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        openM3Picker(el, cb.title);
+      }, { passive: false });
+    }
+  });
+}
+
+function initSettings() {
+  const sBtn = document.getElementById('settingsBtn');
+  const qBtn = document.getElementById('quickThemeBtn');
+  const sModal = document.getElementById('settingsModal');
+  const sClose = document.getElementById('settingsClose');
+  const sOk = document.getElementById('settingsOk');
+  const themeSel = document.getElementById('themeSelectMode');
+  const aTog = document.getElementById('audioToggle');
+  const vTog = document.getElementById('vibeToggle');
+  const langSel = document.getElementById('langSelectMode');
+
+  applyThemeMode(AppSettings.themeMode);
+  updateLanguage(AppSettings.lang);
+  setupM3ComboboxPickers();
+
+  if (qBtn) {
+    qBtn.addEventListener('click', () => {
+      const current = document.documentElement.getAttribute('data-theme');
+      const next = (current === 'light') ? 'dark' : 'light';
+      applyThemeMode(next);
+      toast(t('toast_theme') + (next === 'light' ? '☀️' : '🌙'));
+    });
+  }
+
+  if (themeSel) {
+    themeSel.value = AppSettings.themeMode;
+    themeSel.addEventListener('change', () => applyThemeMode(themeSel.value));
+  }
+
+  if (langSel) {
+    langSel.value = AppSettings.lang;
+    langSel.addEventListener('change', () => updateLanguage(langSel.value));
+  }
+
+  if (aTog) {
+    aTog.checked = AppSettings.audio;
+    aTog.addEventListener('change', () => {
+      AppSettings.audio = aTog.checked;
+      try { localStorage.setItem('vbt_audio', aTog.checked); } catch(e){}
+    });
+  }
+  if (vTog) {
+    vTog.checked = AppSettings.vibe;
+    vTog.addEventListener('change', () => {
+      AppSettings.vibe = vTog.checked;
+      try { localStorage.setItem('vbt_vibe', vTog.checked); } catch(e){}
+    });
+  }
+
+  if (sBtn && sModal) sBtn.addEventListener('click', () => sModal.style.display = 'flex');
+  if (sClose && sModal) sClose.addEventListener('click', () => sModal.style.display = 'none');
+  if (sOk && sModal) sOk.addEventListener('click', () => sModal.style.display = 'none');
+  if (sModal) sModal.addEventListener('click', (e) => { if (e.target === sModal) sModal.style.display = 'none'; });
+
+  const btnCp = document.getElementById('btnOpenCopyright');
+  const cpModal = document.getElementById('copyrightModal');
+  const cpClose = document.getElementById('copyrightClose');
+  const cpOk = document.getElementById('copyrightOk');
+  if (btnCp && cpModal) btnCp.addEventListener('click', () => { sModal.style.display = 'none'; cpModal.style.display = 'flex'; });
+  if (cpClose && cpModal) cpClose.addEventListener('click', () => cpModal.style.display = 'none');
+  if (cpOk && cpModal) cpOk.addEventListener('click', () => cpModal.style.display = 'none');
+  if (cpModal) cpModal.addEventListener('click', (e) => { if (e.target === cpModal) cpModal.style.display = 'none'; });
+}
+
+  (function() {
+    try {
+      var saved = localStorage.getItem('vbt_theme');
+      var mode = (saved === 'light' || saved === 'dark' || saved === 'auto') ? saved : 'auto';
+      var theme = 'dark';
+      if (mode === 'light') {
+        theme = 'light';
+      } else if (mode === 'dark') {
+        theme = 'dark';
+      } else {
+        // AUTO: detect system theme via native Android bridge
+        try {
+          if (typeof Android !== 'undefined' && Android.getSystemTheme) {
+            theme = Android.getSystemTheme();
+          } else {
+            var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            theme = prefersDark ? 'dark' : 'light';
+          }
+        } catch(e2) {
+          theme = 'dark';
+        }
+      }
+      document.documentElement.setAttribute('data-theme', theme);
+    } catch(e){}
+  })();
+</script><style id="body-theme-force">html[data-theme="light"] body{background:#f4f7fb !important;color:#0f172a !important}html[data-theme="dark"] body{background:#0a0a0f !important;color:#e8e8f0 !important}
+  /* ==========================================
+     MATERIAL DESIGN 3 - SELECT DROPDOWNS ONLY
+     ========================================== */
+  select, .field select, #selEs, #sel1RM, #selVLSoglia, #themeSelectMode, #selAsse {
+    background-color: var(--surface) !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%233b82f6' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 14px center !important;
+    background-size: 18px !important;
+    border: 2px solid var(--border) !important;
+    border-radius: 14px !important;
+    color: var(--text) !important;
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    font-family: var(--font-ui) !important;
+    height: 48px !important;
+    padding: 0 40px 0 16px !important;
+    width: 100% !important;
+    outline: none !important;
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    box-sizing: border-box !important;
+    cursor: pointer !important;
+  }
+  select option {
+    background-color: var(--card) !important;
+    color: var(--text) !important;
+    font-size: 15px !important;
+    padding: 12px !important;
+  }
+  select:focus {
+    border-color: var(--blue) !important;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.25) !important;
+    background-color: var(--card) !important;
+  }
+
+  /* ==========================================
+     MATERIAL DESIGN 3 - TEXT & NUMBER INPUTS
+     ========================================== */
+  input[type="text"], input[type="number"], .field input[type="text"], .field input[type="number"], #inAtleta, #inNSerie, #inRepRange, #inCarico, #inSogAtt, #inSMin, #inSTgt, #newEsNome, #newEsFc {
+    background-color: var(--surface) !important;
+    background-image: none !important;
+    border: 2px solid var(--border) !important;
+    border-radius: 14px !important;
+    color: var(--text) !important;
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    font-family: var(--font-ui) !important;
+    height: 48px !important;
+    padding: 0 16px !important;
+    width: 100% !important;
+    outline: none !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05) !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    box-sizing: border-box !important;
+  }
+  input[type="text"]:focus, input[type="number"]:focus {
+    border-color: var(--blue) !important;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.25) !important;
+    background-color: var(--card) !important;
+  }
+
+  .field label {
+    font-size: 11px;
+    color: var(--blue);
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    display: block;
+  }
+  .soglia-box {
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: 14px;
+    padding: 10px 14px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  }
+  .soglia-box input {
+    height: 32px !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+  }
+
+  /* HEADER STYLING WITH QUICK THEME BUTTON */
+  .header { display: flex; align-items: center; justify-content: space-between; padding: 12px 0 6px; width: 100%; box-sizing: border-box; }
+  .header-left { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+  .header h1 { font-size: 15px; font-weight: 700; letter-spacing: -0.3px; margin: 0; color: var(--text); }
+  .header .version { font-size: 10px; color: var(--blue); background: rgba(59,130,246,0.12); padding: 2px 8px; border-radius: 10px; border: 1px solid rgba(59,130,246,0.25); text-align: center; font-family: var(--font-data); display: inline-block; }
+  .header-right { display: flex; align-items: center; gap: 8px; }
+  .header-icon-btn { background: var(--surface); border: 1.5px solid var(--blue); border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+  .header-icon-btn:active { transform: scale(0.92); }
+
+  /* MATERIAL DESIGN 3 PICKER MODAL POPUP ITEM STYLING */
+  .m3-picker-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    border-radius: 14px;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    color: var(--text);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .m3-picker-item.active {
+    background: rgba(59, 130, 246, 0.15);
+    border-color: var(--blue);
+    color: var(--blue);
+  }
+  .m3-picker-item:active {
+    transform: scale(0.98);
+  }
+</style>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0a0a0f">
-<title>VBT Training Smart v4.9</title>
+<title>VBT Training Smart v4.6</title>
 <style>
 :root {
   --bg:#0a0a0f; --surface:#12121a; --card:#1a1a28; --border:#2a2a3f;
@@ -76,8 +586,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-ui);min-heigh
 .btn-cal{background:var(--card);color:var(--text);border:1px solid var(--border);}
 .btn-go{background:var(--green);color:#000;}
 .btn-stop{background:var(--red);color:#fff;}
-.btn-row2{display:grid;grid-template-columns:1fr;gap:8px;}
+.btn-row2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
 .btn-csv{background:var(--blue);color:#fff;}
+.btn-save{background:var(--green);color:#000;}
+.btn-history{background:var(--surface);color:var(--text);border:1px solid var(--border);grid-column: span 2;}
 
 /* ── ASSE SELECTOR ── */
 .asse-row{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;margin-bottom:12px;}
@@ -191,44 +703,33 @@ html[data-theme="dark"] .app,html[data-theme="dark"] .card,html[data-theme="dark
 <body>
 <div class="app">
 
-  <!-- HEADER -->
+    <!-- HEADER -->
   <div class="header">
-    <h1>⚡ VBT-SMART</h1>
-    <span class="version">v4.9 - Antonino Tessio</span>
-    <div class="theme-toggle">
-      <span class="theme-icon">🌙</span>
-      <label class="tog-switch" title="Cambia tema">
-        <input type="checkbox" id="themeSwitch">
-        <span class="tog-slider"></span>
-      </label>
-      <span class="theme-icon">☀️</span>
+    <div class="header-left">
+      <h1 data-i18n="app_title">⚡ VBT-SMART</h1>
+      <span class="version">v5.1 MATERIAL 3 · Antonino Tessio</span>
     </div>
-    <div class="dot" id="dot"></div>
-  </div>
-
-  <!-- BANNER SENSORE -->
-  <div class="sensor-banner" id="sensorBanner">
-    <p>Premi il pulsante per attivare il sensore di movimento.<br>
-    Su iOS apri in Safari · Su Android apri in Chrome.</p>
-    <button class="btn btn-go" style="width:100%;font-size:14px;padding:14px" onclick="attivaPermesso()">
-      📡 Attiva sensore accelerometro
-    </button>
+    <div class="header-right">
+      <button type="button" class="header-icon-btn" id="quickThemeBtn" title="Cambia Tema">🌗</button>
+      <button type="button" class="header-icon-btn" id="settingsBtn" title="Impostazioni">⚙️</button>
+      <div class="dot" id="dot" title="Stato sensore"></div>
+    </div>
   </div>
 
   <!-- CONFIGURAZIONE -->
-  <div class="card" id="configCard" style="display:none">
-    <div class="card-label">Configurazione</div>
+  <div class="card" id="configCard">
+    <div class="card-label" data-i18n="config_title">Configurazione</div>
 
     <div class="field">
-      <label>Atleta</label>
-      <input type="text" id="inAtleta" placeholder="Nome atleta"
+      <label data-i18n="lbl_athlete">Atleta</label>
+      <input type="text" id="inAtleta" placeholder="Nome atleta" data-i18n="ph_athlete"
              style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);
                     color:var(--text);font-size:16px;font-family:var(--font-ui);
                     padding:11px 13px;width:100%;outline:none;transition:border-color .2s;">
     </div>
 
     <div class="field">
-      <label>Esercizio</label>
+      <label data-i18n="lbl_exercise">Esercizio</label>
       <div style="display:flex;gap:8px;align-items:center;">
         <select id="selEs" onchange="aggiornaSoglie()" style="flex:1;min-width:0;"></select>
         <button type="button" id="editEsBtn"
@@ -241,18 +742,18 @@ html[data-theme="dark"] .app,html[data-theme="dark"] .card,html[data-theme="dark
 
     <div class="row-3" style="margin-bottom:12px">
       <div class="field" style="margin-bottom:0">
-        <label>% 1RM</label>
+        <label data-i18n="lbl_1rm">% 1RM</label>
         <select id="sel1RM" onchange="aggiornaSoglie1RM()"></select>
       </div>
       <div class="field" style="margin-bottom:0">
-        <label>N° Serie</label>
+        <label data-i18n="lbl_sets">N° Serie</label>
         <input type="number" id="inNSerie" value="1" min="1" max="20" inputmode="numeric"
                style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);
                       color:var(--text);font-size:16px;font-family:var(--font-ui);
                       padding:11px 13px;width:100%;outline:none;-webkit-appearance:none;appearance:none;transition:border-color .2s;">
       </div>
       <div class="field" style="margin-bottom:0">
-        <label>Rep rif.</label>
+        <label data-i18n="lbl_rep_range">Rep rif.</label>
         <input type="number" id="inRepRange" min="1" max="6" inputmode="numeric"
                onchange="aggiornaSoglie1RM()"
                style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);
@@ -264,13 +765,13 @@ html[data-theme="dark"] .app,html[data-theme="dark"] .card,html[data-theme="dark
     <div class="row-2" style="margin-bottom:12px">
       <div class="field" style="margin-bottom:0">
         <div style="display:flex;align-items:center;height:28px;margin-bottom:5px;">
-          <label style="margin:0">Carico (kg)</label>
+          <label style="margin:0" data-i18n="lbl_load">Carico (kg)</label>
         </div>
-        <input type="number" id="inCarico" name="carico" placeholder="Inserisci un carico" inputmode="decimal" step="any">
+        <input type="number" id="inCarico" name="carico" placeholder="Inserisci un carico" data-i18n="ph_load" inputmode="decimal" step="any">
       </div>
       <div class="field" style="margin-bottom:0">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;height:28px;margin-bottom:5px;">
-          <label style="margin:0">Soglia attivazione (m/s²)</label>
+          <label style="margin:0" data-i18n="lbl_act_thresh">Soglia attivazione (m/s²)</label>
           <button type="button" id="helpSoglieBtn" aria-label="Aiuto soglie" style="border:none;background:var(--blue);color:#fff;width:28px;height:28px;border-radius:50%;font-weight:700;cursor:pointer;line-height:1;flex:0 0 auto;font-size:14px;">?</button>
         </div>
         <input type="number" id="inSogAtt" value="0.8" step="0.05" inputmode="decimal">
@@ -279,11 +780,11 @@ html[data-theme="dark"] .app,html[data-theme="dark"] .card,html[data-theme="dark
 
     <div class="soglia-row">
       <div class="soglia-box smin">
-        <label>🔴 SOGLIA MIN (m/s)</label>
+        <label data-i18n="lbl_min_thresh">🔴 SOGLIA MIN (m/s)</label>
         <input type="number" id="inSMin" value="0.30" step="0.05" inputmode="decimal">
       </div>
       <div class="soglia-box starget">
-        <label>✅ TARGET (m/s)</label>
+        <label data-i18n="lbl_tgt_thresh">✅ TARGET (m/s)</label>
         <input type="number" id="inSTgt" value="0.55" step="0.05" inputmode="decimal">
       </div>
     </div>
@@ -291,7 +792,7 @@ html[data-theme="dark"] .app,html[data-theme="dark"] .card,html[data-theme="dark
     <!-- SOGLIA VELOCITY LOSS (configurabile) -->
     <div class="field" style="margin-bottom:12px">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:0;">
-        <label style="font-size:10px;font-weight:600;color:var(--orange);margin:0">🔻 SOGLIA VL STOP SET (%)</label>
+        <label style="font-size:10px;font-weight:600;color:var(--orange);margin:0" data-i18n="lbl_vl_stop">🔻 SOGLIA VL STOP SET (%)</label>
         <button type="button" id="helpVLBtn" aria-label="Info soglia VL" style="border:none;background:var(--orange);color:#fff;width:22px;height:22px;border-radius:50%;font-weight:700;cursor:pointer;line-height:1;flex:0 0 auto;font-size:12px">?</button>
       </div>
       <select id="selVLSoglia" style="background:var(--surface);border:1px solid var(--border);
@@ -303,7 +804,7 @@ html[data-theme="dark"] .app,html[data-theme="dark"] .card,html[data-theme="dark
         <option value="35">35% — Ipertrofia panca / ipertrofia</option>
         <option value="40">40% — Volume / Fatica massimale</option>
       </select>
-      <div style="font-size:9px;color:var(--muted);margin-top:3px">
+      <div style="font-size:9px;color:var(--muted);margin-top:3px" data-i18n="vl_desc">
         Pareja-Blanco (2017): ≤20% per potenza · 30-35% per forza/ipertrofia
       </div>
     </div>
@@ -311,7 +812,7 @@ html[data-theme="dark"] .app,html[data-theme="dark"] .card,html[data-theme="dark
     <!-- SELEZIONE ASSE -->
     <div class="field" style="margin-bottom:10px">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
-        <label style="margin:0">Asse rilevamento (scegli dopo calibrazione)</label>
+        <label style="margin:0" data-i18n="lbl_axis">Asse rilevamento (scegli dopo calibrazione)</label>
         <button type="button" id="helpAsseBtn" aria-label="Aiuto asse" style="border:none;background:var(--blue);color:#fff;width:28px;height:28px;border-radius:50%;font-weight:700;cursor:pointer;line-height:1;flex:0 0 auto">?</button>
       </div>
     </div>
@@ -323,18 +824,18 @@ html[data-theme="dark"] .app,html[data-theme="dark"] .card,html[data-theme="dark
     </div>
 
     <div class="btn-row">
-      <button class="btn btn-cal" id="btnCal" onclick="calibra()">⚙️ Calibra</button>
-      <button class="btn btn-go"  id="btnGo"  onclick="avvia()" disabled>▶ Avvia</button>
-      <button class="btn btn-stop" id="btnStop" onclick="ferma()" disabled>⏹ Stop</button>
+      <button class="btn btn-cal" id="btnCal" onclick="calibra()" data-i18n="btn_cal">⚙️ Calibra</button>
+      <button class="btn btn-go"  id="btnGo"  onclick="avvia()" disabled data-i18n="btn_go">▶ Avvia</button>
+      <button class="btn btn-stop" id="btnStop" onclick="ferma()" disabled data-i18n="btn_stop">⏹ Stop</button>
     </div>
   </div>
 
   <!-- LIVE DISPLAY -->
-  <div class="live-card" id="liveCard" style="display:none">
+  <div class="live-card" id="liveCard">
     <div class="vel-main" id="velMain">
       <div class="vel-num" id="numVel">—</div>
-      <div class="vel-unit">m/s · velocità media</div>
-      <div class="status-tag" id="tagStatus">In attesa</div>
+      <div class="vel-unit" data-i18n="live_vel_unit">m/s · velocità media</div>
+      <div class="status-tag" id="tagStatus" data-i18n="tag_waiting">In attesa</div>
       <div id="vZonaBadge" style="display:none;margin-top:6px;font-size:10px;font-weight:700;
            letter-spacing:1.2px;text-transform:uppercase;padding:3px 8px;border-radius:4px;
            background:var(--dim);color:var(--text)">—</div>
@@ -344,7 +845,7 @@ html[data-theme="dark"] .app,html[data-theme="dark"] .card,html[data-theme="dark
     <div class="signal-wrap">
       <!-- Livello 1: sensore grezzo -->
       <div class="signal-label" style="margin-bottom:3px">
-        <span style="font-size:9px;letter-spacing:.8px;text-transform:uppercase;color:var(--muted)">1 · Raw m/s²</span>
+        <span style="font-size:9px;letter-spacing:.8px;text-transform:uppercase;color:var(--muted)" data-i18n="sig_raw">1 · Raw m/s²</span>
         <span id="lblAzRaw" style="font-family:var(--font-data);font-size:10px">0.000</span>
       </div>
       <div class="signal-bar-bg" style="margin-bottom:6px">
@@ -352,7 +853,7 @@ html[data-theme="dark"] .app,html[data-theme="dark"] .card,html[data-theme="dark
       </div>
       <!-- Livello 2: segnale filtrato LPF adattivo -->
       <div class="signal-label" style="margin-bottom:3px">
-        <span style="font-size:9px;letter-spacing:.8px;text-transform:uppercase;color:var(--muted)">2 · Filtrato m/s²</span>
+        <span style="font-size:9px;letter-spacing:.8px;text-transform:uppercase;color:var(--muted)" data-i18n="sig_filt">2 · Filtrato m/s²</span>
         <span id="lblAzFilt" style="font-family:var(--font-data);font-size:10px">0.000</span>
       </div>
       <div class="signal-bar-bg" style="margin-bottom:6px">
@@ -360,7 +861,7 @@ html[data-theme="dark"] .app,html[data-theme="dark"] .card,html[data-theme="dark
       </div>
       <!-- Livello 3: velocità integrata live -->
       <div class="signal-label" style="margin-bottom:3px">
-        <span style="font-size:9px;letter-spacing:.8px;text-transform:uppercase;color:var(--muted)">3 · Vel. integrata m/s</span>
+        <span style="font-size:9px;letter-spacing:.8px;text-transform:uppercase;color:var(--muted)" data-i18n="sig_vel">3 · Vel. integrata m/s</span>
         <span id="lblVelLive" style="font-family:var(--font-data);font-size:10px">0.00</span>
       </div>
       <div class="signal-bar-bg">
@@ -370,29 +871,29 @@ html[data-theme="dark"] .app,html[data-theme="dark"] .card,html[data-theme="dark
 
     <div class="metrics-row">
       <div class="metric">
-        <div class="mlabel">REP</div>
+        <div class="mlabel" data-i18n="metric_rep">REP</div>
         <div class="mval" id="numRep">0</div>
       </div>
       <div class="mdiv"></div>
       <div class="metric">
-        <div class="mlabel">V.PICCO</div>
+        <div class="mlabel" data-i18n="metric_peak">V.PICCO</div>
         <div class="mval" id="numPicco">—</div>
         <div class="msub">m/s</div>
       </div>
       <div class="mdiv"></div>
       <div class="metric">
-        <div class="mlabel">V.LOSS</div>
+        <div class="mlabel" data-i18n="metric_loss">V.LOSS</div>
         <div class="mval" id="numLoss">—</div>
-        <div class="msub">vs rep1</div>
+        <div class="msub" data-i18n="metric_vs_rep1">vs rep1</div>
       </div>
     </div>
   </div>
 
   <!-- STORICO REP -->
-  <div class="card" id="storicoCard" style="display:none">
+  <div class="card" id="storicoCard">
     <div class="tog-hdr" onclick="tog('storicoBody','storicoArr')">
       <div style="display:flex;align-items:center;gap:8px;margin:0">
-        <div class="card-label" style="margin:0" id="storicoLabel">Storico serie</div>
+        <div class="card-label" style="margin:0" id="storicoLabel" data-i18n="hist_title">Storico serie</div>
         <button type="button" id="helpMetricheBtn"
                 onclick="event.stopPropagation()"
                 style="border:none;background:var(--surface);color:var(--blue);
@@ -408,15 +909,15 @@ html[data-theme="dark"] .app,html[data-theme="dark"] .card,html[data-theme="dark
            padding:10px 12px;margin-bottom:10px;font-family:var(--font-data);font-size:11px;
            display:grid;grid-template-columns:repeat(4,1fr);gap:6px;"></div>
       <div class="rep-list" id="repList">
-        <div class="empty">Nessuna ripetizione ancora</div>
+        <div class="empty" data-i18n="hist_empty">Nessuna ripetizione ancora</div>
       </div>
     </div>
   </div>
 
   <!-- DIAGNOSTICA -->
-  <div class="card" id="diagCard" style="display:none">
+  <div class="card" id="diagCard">
     <div class="tog-hdr" onclick="tog('diagBody','diagArr')">
-      <div class="card-label" style="margin:0">Diagnostica sensore</div>
+      <div class="card-label" style="margin:0" data-i18n="diag_title">Diagnostica sensore</div>
       <div class="tog-arr" id="diagArr">▼</div>
     </div>
     <div class="collap" id="diagBody" style="margin-top:12px">
@@ -427,8 +928,8 @@ html[data-theme="dark"] .app,html[data-theme="dark"] .card,html[data-theme="dark
       </div>
       <div class="diag-grid">
         <div class="diag-cell"><div class="diag-axis">AZ NETTO</div><div class="diag-val" id="dAzN">—</div></div>
-        <div class="diag-cell"><div class="diag-axis">ASSE SEL.</div><div class="diag-val" id="dAsseAtt">—</div></div>
-        <div class="diag-cell"><div class="diag-axis">HZ REALE</div><div class="diag-val" id="dHz">—</div></div>
+        <div class="diag-cell"><div class="diag-axis" data-i18n="axis_sel">ASSE SEL.</div><div class="diag-val" id="dAsseAtt">—</div></div>
+        <div class="diag-cell"><div class="diag-axis" data-i18n="real_hz">HZ REALE</div><div class="diag-val" id="dHz">—</div></div>
       </div>
       <div class="diag-grid">
         <div class="diag-cell"><div class="diag-axis">GYRO β [°/s]</div><div class="diag-val" id="dGyroBeta">—</div></div>
@@ -436,20 +937,22 @@ html[data-theme="dark"] .app,html[data-theme="dark"] .card,html[data-theme="dark
         <div class="diag-cell"><div class="diag-axis">θ CF [°]</div><div class="diag-val" id="dCFTheta">—</div></div>
       </div>
       <div class="diag-pills">
-        <span class="pill" id="pStato">pronto</span>
-        <span class="pill" id="pCamp">campioni: 0</span>
-        <span class="pill" id="pCal">non calibrato</span>
+        <span class="pill" id="pStato" data-i18n="pill_ready">pronto</span>
+        <span class="pill" id="pCamp" data-i18n="pill_samples">campioni: 0</span>
+        <span class="pill" id="pCal" data-i18n="pill_uncal">non calibrato</span>
         <span class="pill" id="pAsse">Auto - Asse:</span>
         <span class="pill" id="pAlpha">α LPF: —</span>
         <span class="pill" id="pCF">CF: —</span>
-        <span class="pill" id="pWakeLock">🔆 schermo: libero</span>
+        <span class="pill" id="pWakeLock" data-i18n="pill_screen">🔆 schermo: libero</span>
       </div>
     </div>
   </div>
 
   <!-- PULSANTI DATI -->
-  <div class="btn-row2" id="dataRow" style="display:none">
-    <button class="btn btn-csv" onclick="esportaCSV()">📤 Esporta CSV</button>
+  <div class="btn-row2" id="dataRow">
+    <button class="btn btn-save" onclick="salvaSessioneDb()" data-i18n="btn_save">💾 Salva Sessione</button>
+    <button class="btn btn-csv" onclick="esportaCSV()" data-i18n="btn_csv">📤 Esporta CSV</button>
+    <button class="btn btn-history" onclick="apriStoricoSessioni()" data-i18n="btn_history">📚 Storico Sessioni</button>
   </div>
 
 </div>
@@ -469,13 +972,17 @@ html[data-theme="dark"] .app,html[data-theme="dark"] .card,html[data-theme="dark
     <!-- Aggiungi nuovo -->
     <div style="border-top:1px solid var(--border);padding-top:12px;">
       <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;">Aggiungi esercizio</div>
-      <div style="display:flex;gap:8px;margin-bottom:6px;">
-        <input type="text" id="newEsNome" placeholder="Nome esercizio"
-               style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);
-                      color:var(--text);font-size:14px;padding:9px 11px;outline:none;font-family:var(--font-ui);">
-        <input type="number" id="newEsFc" value="4.0" min="1" max="12" step="0.5" title="Freq. taglio LPF (Hz)"
-               style="width:66px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);
-                      color:var(--text);font-size:14px;padding:9px 8px;outline:none;font-family:var(--font-ui);text-align:center;">
+      <div style="display:flex;gap:8px;margin-bottom:8px;align-items:flex-end;">
+        <div style="flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:3px;">
+          <label style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">Nome Esercizio</label>
+          <input type="text" id="newEsNome" placeholder="Nome nuovo esercizio..."
+                 style="width:100%;background:var(--surface);border:2px solid var(--blue);border-radius:12px;color:var(--text);font-size:15px;font-weight:600;padding:10px 14px;outline:none;height:44px;box-sizing:border-box;">
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex-shrink:0;">
+          <label style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">Hz</label>
+          <input type="number" id="newEsFc" value="4.0" min="1" max="12" step="0.5" title="Freq. taglio LPF (Hz)"
+                 style="width:56px;background:var(--surface);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-size:13px;font-weight:600;padding:0 4px;outline:none;text-align:center;height:44px;box-sizing:border-box;">
+        </div>
       </div>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-bottom:6px;">
         <button type="button" id="addEsBtn"
@@ -705,7 +1212,11 @@ html[data-theme="dark"] .app,html[data-theme="dark"] .card,html[data-theme="dark
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded',()=>{const b=document.getElementById('helpAsseBtn'),m=document.getElementById('helpAsseModal'),c=()=>{if(m)m.style.display='none'},o=()=>{if(m)m.style.display='flex'};if(b)b.addEventListener('click',o);['helpAsseClose','helpAsseOk'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('click',c)});if(m)m.addEventListener('click',e=>{if(e.target===m)c()});document.addEventListener('keydown',e=>{if(e.key==='Escape')c()});
+document.addEventListener('DOMContentLoaded',()=>{
+  initSettings();
+  attivaPermesso();
+  mostraUI();
+  setTimeout(() => toast('📡 Sensori Hardware 3D & Giroscopio Attivi (v5.1 M3)'), 400);const b=document.getElementById('helpAsseBtn'),m=document.getElementById('helpAsseModal'),c=()=>{if(m)m.style.display='none'},o=()=>{if(m)m.style.display='flex'};if(b)b.addEventListener('click',o);['helpAsseClose','helpAsseOk'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('click',c)});if(m)m.addEventListener('click',e=>{if(e.target===m)c()});document.addEventListener('keydown',e=>{if(e.key==='Escape')c()});
   /* ── helper Metriche ── */
   const bM=document.getElementById('helpMetricheBtn'),mM=document.getElementById('helpMetricheModal');
   const cM=()=>{if(mM)mM.style.display='none'};
@@ -960,7 +1471,9 @@ function initAudio() {
   if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
   if (actx.state === 'suspended') actx.resume();
 }
-function beep(f=880, ms=180, v=0.55) {
+function isAudioEnabled() { const el = document.getElementById('audioToggle'); return el ? el.checked : true; }
+function isVibeEnabled() { const el = document.getElementById('vibeToggle'); return el ? el.checked : true; }
+function beep(f=880, ms=180, v=0.55) { if(!isAudioEnabled()) return;
   try {
     initAudio();
     const o = actx.createOscillator(), g = actx.createGain();
@@ -977,7 +1490,7 @@ function beepDoppio() { beep(880,160,.7); setTimeout(()=>beep(660,200,.8), 230);
 
 /* beepWarn — avviso avvicinamento soglia VL (zona gialla ~70% della soglia)
    Tono singolo secco, sawtooth, percepibile ma non allarmante */
-function beepWarn() {
+function beepWarn() { if(!isAudioEnabled()) return;
   try {
     initAudio();
     const o = actx.createOscillator(), g = actx.createGain();
@@ -994,7 +1507,7 @@ function beepWarn() {
 
 /* beepAlert — superamento soglia VL: due toni discendenti forti + vibrazione
    Sawtooth massimo volume, pattern riconoscibile come "allarme" */
-function beepAlert() {
+function beepAlert() { if(!isAudioEnabled()) return;
   try {
     initAudio();
     // Primo tono: acuto, forte
@@ -1018,7 +1531,7 @@ function beepAlert() {
   // Vibrazione: pattern breve-lunga per distinguerlo da altri feedback
   vibra([80, 60, 200]);
 }
-function vibra(ms=400){ try{ navigator.vibrate && navigator.vibrate(ms); }catch(e){} }
+function vibra(ms=400){ if(!isVibeEnabled()) return; try{ navigator.vibrate(ms); }catch(e){} }
 
 /* ═══════════════════════════════════════════════
    TOAST
@@ -1758,7 +2271,7 @@ function ferma() {
   const inNS = document.getElementById('inNSerie');
   if (inNS) inNS.value = nSerie + 1;
 
-  // FIX v4.9 BugB: resetta _diagVel → il display "Vel. integrata" torna a 0.00
+  // FIX v5.1 BugB: resetta _diagVel → il display "Vel. integrata" torna a 0.00
   // dopo ferma(), invece di congelare sull'ultima velocità della serie.
   _diagVel = 0;
   releaseWakeLock();
@@ -1885,16 +2398,9 @@ function tickAlgoritmo(e) {
 
   const azN_raw_pre = getAzNetto();
 
-  /* ── Filtro Complementare monoasse (sensor fusion acc + gyro) ──────────
-     Stima e rimuove la componente di gravità dinamica introdotta
-     dall'inclinazione del telefono durante il sollevamento.
-     Anche 2-3° producono g·sin(θ) ≈ 0.3-0.5 m/s² → errore velocità 20-40%.
-
-     Mapping asse → rotationRate:
-       asse Z (piano) / Y (portrait) → rotationRate.beta  (pitch)
-       asse X (fianco)               → rotationRate.gamma (roll)
-     rotationRate in gradi/s su tutti i browser moderni → ×π/180.
-     Safe fallback: se rotationRate non disponibile, azN_raw = azN_raw_pre.
+  /* ── Filtro Complementare e Sensore di Oscillazioni ──────────
+     Usa il giroscopio per rilevare le oscillazioni del device (se non fissato
+     bene) e per compensare l'inclinazione (tilt) durante il movimento.
   ────────────────────────────────────────────────────────────────────── */
   const CF_TAU  = 0.30;
   const DEG2RAD = Math.PI / 180;
@@ -1903,25 +2409,66 @@ function tickAlgoritmo(e) {
   const rr = e.rotationRate;
   if (rr && rr.beta !== null && rr.gamma !== null) {
     const asseEff    = (S.asse !== 'auto') ? S.asse : S.asseAuto;
+    const omega_beta = (rr.beta ?? 0) * DEG2RAD;
+    const omega_gamma= (rr.gamma ?? 0) * DEG2RAD;
     const omega_degs = (asseEff === 'x') ? (rr.gamma ?? 0) : (rr.beta ?? 0);
     const omega_rads = omega_degs * DEG2RAD;
     const g_nom      = 9.81;
-    const sinTheta   = Math.min(1.0, Math.max(-1.0, azN_raw_pre / g_nom));
-    const theta_acc  = Math.asin(sinTheta);
-    if (!S.cf_init) {
-      S.cf_theta = theta_acc;
-      S.cf_init  = true;
+
+    // Magnitudo della rotazione: rivela oscillazioni forti e movimenti parassiti
+    // se il device non è fissato rigidamente.
+    const omega_mag = Math.sqrt(omega_beta * omega_beta + omega_gamma * omega_gamma);
+
+    if (!S.useAccPura) {
+      // ── MODO CON GRAVITÀ (Fallback) ──
+      // Usa il filtro complementare per stimare l'inclinazione dinamica e
+      // rimuovere la componente di gravità deviata sull'asse di lettura.
+      const sinTheta   = Math.min(1.0, Math.max(-1.0, azN_raw_pre / g_nom));
+      const theta_acc  = Math.asin(sinTheta);
+      if (!S.cf_init) {
+        S.cf_theta = theta_acc;
+        S.cf_init  = true;
+      } else {
+        const cf_alpha = CF_TAU / (CF_TAU + dtEff);
+        S.cf_theta = cf_alpha * (S.cf_theta + (omega_rads - S.cf_gBias) * dtEff)
+                   + (1 - cf_alpha) * theta_acc;
+      }
+      if (!S.inRep && tickAlgoritmo._quietCont >= 4) {
+        const bias_alpha = dtEff / (5.0 + dtEff);
+        S.cf_gBias = bias_alpha * omega_rads + (1 - bias_alpha) * S.cf_gBias;
+      }
+      azN_raw = azN_raw_pre - g_nom * Math.sin(S.cf_theta);
     } else {
-      const cf_alpha = CF_TAU / (CF_TAU + dtEff);
-      S.cf_theta = cf_alpha * (S.cf_theta + (omega_rads - S.cf_gBias) * dtEff)
-                 + (1 - cf_alpha) * theta_acc;
+      // ── MODO ACCELERAZIONE PURA (Senza gravità) ──
+      // L'OS ha già rimosso la gravità. Integriamo il giroscopio per seguire
+      // l'angolo e proiettiamo l'accelerazione letta sul piano di spinta reale.
+      if (!S.cf_init) {
+        S.cf_theta = 0;
+        S.cf_init  = true;
+      } else {
+        // Integrazione giroscopio pura con lievissimo decadimento a 0 per stabilità
+        S.cf_theta += (omega_rads - S.cf_gBias) * dtEff;
+        S.cf_theta *= Math.exp(-dtEff / 1.5);
+      }
+      if (!S.inRep && tickAlgoritmo._quietCont >= 4) {
+        const bias_alpha = dtEff / (5.0 + dtEff);
+        S.cf_gBias = bias_alpha * omega_rads + (1 - bias_alpha) * S.cf_gBias;
+      }
+      // Se il telefono si inclina, l'asse z non è allineato col movimento verticale.
+      // Proiezione compensativa: a_vero = a_sensore / cos(theta)
+      const cosTheta = Math.max(0.60, Math.cos(S.cf_theta));
+      azN_raw = azN_raw_pre / cosTheta;
     }
-    // Aggiornamento bias giroscopio durante la quiete
-    if (!S.inRep && tickAlgoritmo._quietCont >= 4) {
-      const bias_alpha = dtEff / (5.0 + dtEff);
-      S.cf_gBias = bias_alpha * omega_rads + (1 - bias_alpha) * S.cf_gBias;
+
+    // ── GESTIONE DEVICE NON FISSATO (OSCILLAZIONI FORTI) ──
+    // Se il dispositivo vibra fortemente o sbanda (es. > 1.2 rad/s ≈ 70°/s),
+    // l'accelerometro lineare viene inquinato da forze centrifughe/tangenziali.
+    // Riduciamo il gain in questi frangenti per evitare di integrare picchi spuri
+    // e oltrepassare erroneamente le soglie massime.
+    if (omega_mag > 1.2) {
+      const penalty = Math.max(0.3, 1.0 - (omega_mag - 1.2) * 0.4);
+      azN_raw *= penalty;
     }
-    azN_raw = azN_raw_pre - g_nom * Math.sin(S.cf_theta);
   }
 
   // FIX v4.8 Bug5: spike rejection — reintroduce il controllo documentato in v4.5.3
@@ -2142,7 +2689,7 @@ function tickAlgoritmo(e) {
   }
 
   /* ── Decadimento esponenziale anti-drift (τ = 1s) — SOLO in quiete ────
-     FIX v4.9 BugA: il decay originale era applicato ad OGNI campione (anche
+     FIX v5.1 BugA: il decay originale era applicato ad OGNI campione (anche
      durante la concentrica), introducendo un errore sistematico di -10..16%
      su vPicco e vMedia (simulato: squat 85% → -11.6%, bench 75% → -15.7%).
      Fix: decay attivo SOLO quando quietCont >= 1 (sensore in fase di quiete
@@ -2311,7 +2858,7 @@ function calcolaRep() {
   // Durata rep (ms): somma dt campioni accumulati.
   // S.campDt ha sempre length = S.vel.length - 1 (vel parte con sentinel [0],
   // campDt parte vuoto e accumula un entry per ogni campione integrato).
-  // FIX v4.9 BugC: rimosso ternario ridondante (entrambi i branch erano S.campDt).
+  // FIX v5.1 BugC: rimosso ternario ridondante (entrambi i branch erano S.campDt).
   const dtArr = S.campDt;
   S.durMs = Math.round(dtArr.reduce((a,b) => a+b, 0) * 1000);
 
@@ -2500,13 +3047,24 @@ function aggiornaRepList(zona) {
   });
   document.getElementById('repList').innerHTML =
     S.repLog.slice().reverse().map(r =>
-      `<div class="rep-row ${r.zona}">
+      `<div class="rep-row ${r.zona}" onclick="apriDettaglioRep(${r.n})" style="cursor:pointer">
         <span class="rep-n">REP ${r.n}</span>
         <span class="rep-v ${r.zona}">${r.vM.toFixed(2)}<br><small style="font-size:9px;font-weight:400;color:var(--muted)">m/s</small></span>
         <span class="rep-meta">↑${r.vP.toFixed(2)} · ${r.rom.toFixed(0)}cm · ${r.pw > 0 ? r.pw.toFixed(0)+'W' : '—'} · −${r.loss.toFixed(1)}%</span>
         <span class="rep-icons">${r.zona==='verde'?'✅':r.zona==='orange'?'⚠️':'🔴'}${r.anomalia?'<span style="font-size:11px">🚨</span>':''}</span>
        </div>`
     ).join('');
+}
+
+/* ═══════════════════════════════════════════════
+   DETTAGLIO RIPETIZIONE
+═══════════════════════════════════════════════ */
+function apriDettaglioRep(nRep) {
+  // Cerca la ripetizione nello storico (prendiamo l'ultima registrata per quel numero)
+  const repDataList = S.storico.filter(x => x.nRep === nRep);
+  if (!repDataList.length) return;
+  const repData = repDataList[repDataList.length - 1];
+  popolaUIModaleDettaglio(repData);
 }
 
 /* ═══════════════════════════════════════════════
@@ -2538,6 +3096,10 @@ function logRep() {
   // Formato ora Vbt Training: HH:MM:SS
   const oraStr  = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
 
+  const lastRep = S.repLog.length > 0 ? S.repLog[S.repLog.length - 1] : null;
+  const zona = lastRep ? lastRep.zona : '';
+  const anomalia = lastRep ? lastRep.anomalia : false;
+
   S.storico.push({
     atleta,
     cognome:     '',
@@ -2558,13 +3120,15 @@ function logRep() {
     tPiccoMs:    S.tPiccoMs,
     accelIdx:    S.accelIdx,
     vLoss:       S.vLoss,
+    zona:        zona,
+    anomalia:    anomalia
   });
 }
 
-
 /* Esporta CSV senza colonna Email */
-function esportaCSV() {
-  if (!S.storico.length) { toast('⚠️ Nessun dato'); return; }
+function esportaCSV(repsOverride = null) {
+  const dataset = repsOverride || S.storico;
+  if (!dataset || !dataset.length) { toast('⚠️ Nessun dato'); return; }
 
   // Funzione helper: converte numero in stringa con virgola decimale (locale IT)
   const itNum = (n, dec) => {
@@ -2574,7 +3138,7 @@ function esportaCSV() {
 
   // Colonne condizionali: includi Mean Power solo se almeno una rep ha carico > 0
   // (meanPowerW = kg * 9.81 * vMedia, quindi > 0 solo se carico era inserito)
-  const hasPower = S.storico.some(r => r.meanPowerW > 0);
+  const hasPower = dataset.some(r => r.meanPowerW > 0);
   // Dynamic-isometric strength: non misurabile da accelerometro → esclusa sempre
   // (placeholder '': colonna soppressa, nessun dato affidabile)
 
@@ -2584,42 +3148,279 @@ function esportaCSV() {
     '# Set', 'Weight (kg)', 'Comments', '# Rep.', 'Type*',
     'Main velocity [MPV/MV] (m/s)', 'Peak Velocity (m/s)', 'ROM (cm)',
     ...(hasPower ? ['Mean Power (W)'] : []),
-    '1RM (kg)',
+    '1Rm STIM (kg)',
     'Duration (ms)', 'Time to peak velocity (ms)',
     'Acceleration index (m/s²)',
+    'vLoss (%)', 'Target', 'Anomalia'
   ];
 
-  const rows = S.storico.map(r => [
-    r.atleta,
-    r.cognome,
-    r.esercizio,
-    r.dataStr,
-    ` ${r.oraStr}`,          // spazio iniziale = formato
-    r.nSerie,
-    `"${r.carico}"`,
-    r.commenti,
-    r.nRep,
-    r.tipo,
-    `"${itNum(r.vMedia, 2)}"`,
-    `"${itNum(r.vPicco, 2)}"`,
-    `"${itNum(r.romCm,  2)}"`,
-    ...(hasPower ? [`"${itNum(r.meanPowerW, 2)}"`] : []),
-    `"${itNum(r.stima1RM,   2)}"`,
-    r.durMs,
-    r.tPiccoMs,
-    `"${itNum(r.accelIdx, 2)}"`,
-  ].join(','));
+  const rows = dataset.map(r => {
+    let targetStr = '';
+    if (r.zona === 'verde') targetStr = '✅ Target Raggiunto';
+    else if (r.zona === 'orange') targetStr = '⚠️ Sotto Target';
+    else if (r.zona === 'rossa') targetStr = '🔴 Sotto Soglia';
+
+    let anomaliaStr = r.anomalia ? '🚨 Vel. anomala' : '';
+
+    return [
+      r.atleta,
+      r.cognome,
+      r.esercizio,
+      r.dataStr,
+      ` ${r.oraStr}`,          // spazio iniziale = formato
+      r.nSerie,
+      `"${r.carico}"`,
+      r.commenti,
+      r.nRep,
+      r.tipo,
+      `"${itNum(r.vMedia, 2)}"`,
+      `"${itNum(r.vPicco, 2)}"`,
+      `"${itNum(r.romCm,  2)}"`,
+      ...(hasPower ? [`"${itNum(r.meanPowerW, 2)}"`] : []),
+      `"${itNum(r.stima1RM,   2)}"`,
+      r.durMs,
+      r.tPiccoMs,
+      `"${itNum(r.accelIdx, 2)}"`,
+      `"${itNum(r.vLoss, 1)}"`,
+      `"${targetStr}"`,
+      `"${anomaliaStr}"`
+    ].join(',');
+  });
 
   // BOM UTF-8 per compatibilità Excel
   const BOM  = '\uFEFF';
   const body = BOM + headers.join(',') + '\n' + rows.join('\n');
+  const filename = 'VBT-Training' + new Date().toISOString().slice(0,10) + '.csv';
+
+  try {
+    if (typeof Android !== 'undefined' && Android.saveCSV) {
+      // Use native bridge: it handles saving to Downloads and shows a Toast with absolute path
+      Android.saveCSV(filename, body);
+      return;
+    }
+  } catch(e) {}
+
+  // Fallback for desktop browsers
   const blob = new Blob([body], {type:'text/csv;charset=utf-8;'});
   const a    = document.createElement('a');
   a.href     = URL.createObjectURL(blob);
-  a.download = 'VBT-Training' + new Date().toISOString().slice(0,10) + '.csv';
+  a.download = filename;
   a.click();
   URL.revokeObjectURL(a.href);
-  toast('📤 CSV Vbt Training scaricato!');
+  toast('📤 CSV scaricato (Controlla cartella Download)');
+}
+
+/* ═══════════════════════════════════════════════
+   DATABASE LOCALE (localStorage) & UI STORICO
+═══════════════════════════════════════════════ */
+function getSessionsDb() {
+  try {
+    const raw = localStorage.getItem('vbt_sessions_db');
+    return raw ? JSON.parse(raw) : [];
+  } catch(e) {
+    return [];
+  }
+}
+
+function saveSessionsDb(data) {
+  try {
+    localStorage.setItem('vbt_sessions_db', JSON.stringify(data));
+  } catch(e) {
+    toast('❌ Errore salvataggio: memoria piena?');
+  }
+}
+
+function salvaSessioneDb() {
+  if (!S.storico || S.storico.length === 0) {
+    toast('⚠️ Nessuna ripetizione da salvare.');
+    return;
+  }
+  
+  const now = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  const dateStr = `${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()}`;
+  const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  
+  const es     = document.getElementById('selEs');
+  const esNome = es ? es.options[es.selectedIndex].text : 'Sconosciuto';
+  const carico = S.caricoKg || 0;
+  
+  const sessionRecord = {
+    id: now.getTime(),
+    esercizio: esNome,
+    dataStr: dateStr,
+    oraStr: timeStr,
+    carico: carico,
+    totReps: S.storico.length,
+    reps: JSON.parse(JSON.stringify(S.storico)) // deep copy
+  };
+
+  const db = getSessionsDb();
+  db.push(sessionRecord);
+  saveSessionsDb(db);
+
+  document.getElementById('saveConfirmModal').style.display = 'flex';
+}
+
+function eseguiResetSchermo(reset) {
+  document.getElementById('saveConfirmModal').style.display = 'none';
+  if (reset) {
+    S.storico = [];
+    S.repLog = [];
+    S.repN = 0;
+    S.vLoss = 0;
+    S.vRef = 0;
+    document.getElementById('repList').innerHTML = '';
+    document.getElementById('numRep').textContent = '0';
+    document.getElementById('numVel').textContent = '0.00';
+    document.getElementById('numPicco').textContent = '0.00';
+    document.getElementById('numLoss').textContent = '0.0%';
+    document.getElementById('numLoss').className = 'mval ok';
+    document.getElementById('tagStatus').textContent = 'IN ATTESA';
+    setZona('idle');
+  } else {
+    toast('💾 Sessione salvata nel DB');
+  }
+}
+
+function apriStoricoSessioni() {
+  const db = getSessionsDb();
+  const container = document.getElementById('historyListBody');
+  if (db.length === 0) {
+    container.innerHTML = '<div style="text-align:center;color:var(--muted);margin-top:40px;">Nessuna sessione salvata</div>';
+  } else {
+    // Ordine inverso: più recenti in alto
+    container.innerHTML = db.slice().reverse().map(s => `
+      <div style="background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:12px; cursor:pointer; margin-bottom:8px;" onclick="apriDettaglioSessioneDb(${s.id})">
+        <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+          <strong style="color:var(--blue); font-size:15px;">${s.esercizio}</strong>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:12px; color:var(--muted);">${s.dataStr} ${s.oraStr}</span>
+            <button onclick="event.stopPropagation(); esportaSessioneStorica(${s.id})" style="background:none; border:none; color:var(--blue); font-size:16px; cursor:pointer; padding:4px;" title="Esporta in CSV">📤</button>
+            <button onclick="event.stopPropagation(); confermaEliminaSessione(${s.id})" style="background:none; border:none; color:var(--red); font-size:16px; cursor:pointer; padding:4px;" title="Elimina sessione">🗑️</button>
+          </div>
+        </div>
+        <div style="font-size:13px; color:var(--text); display:flex; justify-content:space-between;">
+          <span>Carico: <strong>${s.carico} kg</strong></span>
+          <span>Reps: <strong>${s.totReps}</strong></span>
+        </div>
+      </div>
+    `).join('');
+  }
+  document.getElementById('historyListModal').style.display = 'flex';
+}
+
+function esportaSessioneStorica(id) {
+  const db = getSessionsDb();
+  const session = db.find(s => s.id === id);
+  if (!session) return;
+  esportaCSV(session.reps);
+}
+
+let sessionToDelete = null;
+
+function confermaEliminaSessione(id) {
+  sessionToDelete = id;
+  document.getElementById('deleteConfirmModal').style.display = 'flex';
+}
+
+function eseguiEliminaSessione(conferma) {
+  document.getElementById('deleteConfirmModal').style.display = 'none';
+  if (conferma && sessionToDelete !== null) {
+    let db = getSessionsDb();
+    db = db.filter(s => s.id !== sessionToDelete);
+    saveSessionsDb(db);
+    sessionToDelete = null;
+    toast('🗑️ Sessione eliminata');
+    apriStoricoSessioni(); // Ricarica la lista aggiornata
+  }
+}
+
+function apriDettaglioSessioneDb(id) {
+  const db = getSessionsDb();
+  const session = db.find(s => s.id === id);
+  if (!session) return;
+
+  document.getElementById('histDetTitle').textContent = session.esercizio;
+  document.getElementById('histDetSub').textContent = `${session.dataStr} ${session.oraStr} · ${session.carico} kg`;
+
+  const container = document.getElementById('histDetReps');
+  container.innerHTML = session.reps.slice().reverse().map((r, idx) => {
+    // idx inverso perchè stiamo rovesciando l'array per visualizzarle dall'ultima alla prima
+    const reverseIndex = session.reps.length - 1 - idx;
+    return `
+      <div class="rep-row ${r.zona}" onclick="apriDettaglioRepDaStorico(${session.id}, ${reverseIndex})" style="cursor:pointer; display:grid;">
+        <span class="rep-n">REP ${r.nRep}</span>
+        <span class="rep-v ${r.zona}">${r.vMedia.toFixed(2)}<br><small style="font-size:9px;font-weight:400;color:var(--muted)">m/s</small></span>
+        <span class="rep-meta">↑${r.vPicco.toFixed(2)} · ${r.romCm.toFixed(0)}cm · ${r.meanPowerW > 0 ? r.meanPowerW.toFixed(0)+'W' : '—'} · −${r.vLoss.toFixed(1)}%</span>
+        <span class="rep-icons">${r.zona==='verde'?'✅':r.zona==='orange'?'⚠️':'🔴'}${r.anomalia?'<span style="font-size:11px">🚨</span>':''}</span>
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('historyDetailModal').style.display = 'flex';
+}
+
+// Helper per aprire il dettaglio analitico leggendo direttamente dal DB invece che dallo stato live
+function apriDettaglioRepDaStorico(sessionId, repIndex) {
+  const db = getSessionsDb();
+  const session = db.find(s => s.id === sessionId);
+  if (!session || !session.reps[repIndex]) return;
+  const repData = session.reps[repIndex];
+  // Riutilizziamo la UI di dettaglio, che però aspetta i dati popolati:
+  popolaUIModaleDettaglio(repData);
+}
+
+function popolaUIModaleDettaglio(repData) {
+  document.getElementById('repDetTitle').innerHTML = `<strong>Dettaglio Rip. ${repData.nRep}</strong><br><small style="color:var(--muted)">${repData.oraStr}</small>`;
+  
+  let tgtStr = '';
+  if (repData.zona === 'verde') tgtStr = '✅ Target Raggiunto';
+  else if (repData.zona === 'orange') tgtStr = '⚠️ Sotto Target';
+  else if (repData.zona === 'rossa') tgtStr = '🔴 Sotto Soglia';
+
+  let anomaliaStr = repData.anomalia ? '<div style="color:#ef4444;font-size:12px;margin-top:4px;">🚨 Velocità anomala rilevata</div>' : '';
+
+  const html = `
+    <div style="display:flex;justify-content:space-between;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--border);">
+      <span style="color:var(--muted)">Velocità Media</span>
+      <strong style="font-size:16px;">${repData.vMedia.toFixed(2)} m/s</strong>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--border);">
+      <span style="color:var(--muted)">Velocità Picco</span>
+      <strong>${repData.vPicco.toFixed(2)} m/s</strong>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--border);">
+      <span style="color:var(--muted)">Velocity Loss</span>
+      <strong style="${repData.vLoss > 20 ? 'color:#ef4444' : ''}">-${repData.vLoss.toFixed(1)} %</strong>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--border);">
+      <span style="color:var(--muted)">1RM Stimato</span>
+      <strong>${repData.stima1RM > 0 ? repData.stima1RM.toFixed(1) + ' kg' : '—'}</strong>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--border);">
+      <span style="color:var(--muted)">Potenza Media</span>
+      <strong>${repData.meanPowerW > 0 ? repData.meanPowerW.toFixed(0) + ' W' : '—'}</strong>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--border);">
+      <span style="color:var(--muted)">ROM</span>
+      <strong>${repData.romCm.toFixed(1)} cm</strong>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--border);">
+      <span style="color:var(--muted)">Tempo al Picco</span>
+      <strong>${repData.tPiccoMs} ms</strong>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--border);">
+      <span style="color:var(--muted)">Durata Totale</span>
+      <strong>${repData.durMs} ms</strong>
+    </div>
+    <div style="text-align:center;margin-top:12px;font-size:14px;background:var(--bg-card);padding:8px;border-radius:6px;">
+      ${tgtStr}
+      ${anomaliaStr}
+    </div>
+  `;
+  document.getElementById('repDetBody').innerHTML = html;
+  document.getElementById('repDetModal').style.display = 'flex';
 }
 
 /* ── Theme init (eseguito subito, non serve DOMContentLoaded) ── */
@@ -2639,5 +3440,202 @@ function esportaCSV() {
   sw.addEventListener('change', () => applyTheme(sw.checked));
 })();
 </script>
+<!-- MODALE DETTAGLIO REP -->
+<div id="repDetModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:2300;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:var(--bg); border:1px solid var(--border); border-radius:16px; width:100%; max-width:360px; overflow:hidden; box-shadow:0 12px 32px rgba(0,0,0,0.4);">
+    <div style="padding:16px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+      <h3 id="repDetTitle" style="margin:0; font-size:16px;">Dettaglio Ripetizione</h3>
+      <button onclick="document.getElementById('repDetModal').style.display='none'" style="background:none; border:none; color:var(--text); font-size:24px; line-height:1; cursor:pointer;">&times;</button>
+    </div>
+    <div id="repDetBody" style="padding:16px; font-size:14px;">
+      <!-- inserito dinamicamente -->
+    </div>
+    <div style="padding:16px; text-align:center; border-top:1px solid var(--border);">
+      <button onclick="document.getElementById('repDetModal').style.display='none'" class="btn" style="width:100%">Chiudi</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODALE CONFERMA SALVATAGGIO -->
+<div id="saveConfirmModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:2400;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:var(--bg); border:1px solid var(--border); border-radius:16px; width:100%; max-width:340px; overflow:hidden; box-shadow:0 12px 32px rgba(0,0,0,0.4); text-align:center;">
+    <div style="padding:24px 16px 16px 16px;">
+      <div style="font-size:32px; margin-bottom:12px;">✅</div>
+      <h3 style="margin:0 0 12px 0; font-size:18px;">Sessione salvata con successo</h3>
+      <p style="margin:0; font-size:14px; color:var(--muted);">Vuoi pulire lo schermo per iniziare un nuovo allenamento?</p>
+    </div>
+    <div style="display:flex; border-top:1px solid var(--border);">
+      <button onclick="eseguiResetSchermo(false)" style="flex:1; padding:16px; background:none; border:none; border-right:1px solid var(--border); color:var(--muted); font-size:15px; font-weight:600; cursor:pointer;">No, mantieni</button>
+      <button onclick="eseguiResetSchermo(true)" style="flex:1; padding:16px; background:none; border:none; color:var(--green); font-size:15px; font-weight:700; cursor:pointer;">Sì, pulisci</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODALE ELIMINA SESSIONE -->
+<div id="deleteConfirmModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:2400;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:var(--bg); border:1px solid var(--border); border-radius:16px; width:100%; max-width:340px; overflow:hidden; box-shadow:0 12px 32px rgba(0,0,0,0.4); text-align:center;">
+    <div style="padding:24px 16px 16px 16px;">
+      <div style="font-size:32px; margin-bottom:12px;">🗑️</div>
+      <h3 style="margin:0 0 12px 0; font-size:18px;">Elimina sessione</h3>
+      <p style="margin:0; font-size:14px; color:var(--muted);">Vuoi davvero eliminare questa sessione salvata? L'azione non è reversibile.</p>
+    </div>
+    <div style="display:flex; border-top:1px solid var(--border);">
+      <button onclick="eseguiEliminaSessione(false)" style="flex:1; padding:16px; background:none; border:none; border-right:1px solid var(--border); color:var(--muted); font-size:15px; font-weight:600; cursor:pointer;">Annulla</button>
+      <button onclick="eseguiEliminaSessione(true)" style="flex:1; padding:16px; background:none; border:none; color:var(--red); font-size:15px; font-weight:700; cursor:pointer;">Elimina</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODALE LISTA STORICO SESSIONI -->
+<div id="historyListModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:2200;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:var(--bg); border:1px solid var(--border); border-radius:16px; width:100%; max-width:400px; height:80vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 12px 32px rgba(0,0,0,0.4);">
+    <div style="padding:16px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+      <h3 style="margin:0; font-size:18px;">📚 Storico Sessioni</h3>
+      <button onclick="document.getElementById('historyListModal').style.display='none'" style="background:none; border:none; color:var(--text); font-size:24px; line-height:1; cursor:pointer;">&times;</button>
+    </div>
+    <div id="historyListBody" style="padding:12px; overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:10px;">
+      <!-- elenco sessioni inserito via js -->
+    </div>
+    <div style="padding:16px; border-top:1px solid var(--border);">
+      <button onclick="document.getElementById('historyListModal').style.display='none'" class="btn" style="width:100%">Chiudi</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODALE DETTAGLIO SESSIONE STORICA -->
+<div id="historyDetailModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:2250;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:var(--bg); border:1px solid var(--border); border-radius:16px; width:100%; max-width:400px; height:85vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 12px 32px rgba(0,0,0,0.4);">
+    <div style="padding:16px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+      <div>
+        <h3 id="histDetTitle" style="margin:0; font-size:16px;">Dettaglio Sessione</h3>
+        <div id="histDetSub" style="font-size:12px; color:var(--muted); margin-top:4px;"></div>
+      </div>
+      <button onclick="document.getElementById('historyDetailModal').style.display='none'" style="background:none; border:none; color:var(--text); font-size:24px; line-height:1; cursor:pointer;">&times;</button>
+    </div>
+    <div id="histDetReps" style="padding:12px; overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:8px;">
+      <!-- elenco ripetute -->
+    </div>
+    <div style="padding:16px; border-top:1px solid var(--border);">
+      <button onclick="document.getElementById('historyDetailModal').style.display='none'" class="btn" style="width:100%">Torna alla lista</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODALE IMPOSTAZIONI -->
+<div id="settingsModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:2200;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:18px;max-width:380px;width:100%;padding:20px;box-shadow:0 24px 64px rgba(0,0,0,0.6);display:flex;flex-direction:column;gap:16px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <div style="font-size:16px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px;">
+        <span data-i18n="btn_settings">⚙️</span> <span data-i18n="set_title">Impostazioni</span>
+      </div>
+      <button type="button" id="settingsClose" style="border:none;background:transparent;color:var(--muted);font-size:22px;line-height:1;cursor:pointer;">×</button>
+    </div>
+    
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <!-- TEMA VISIVO -->
+      <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface);padding:12px 14px;border-radius:12px;border:1.5px solid var(--border);">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--text);" data-i18n="set_theme">Tema Visivo</div>
+          <div style="font-size:10px;color:var(--muted);" data-i18n="set_theme_desc">Modalità colore dell'app</div>
+        </div>
+        <select id="themeSelectMode" style="width:140px;height:38px;">
+          <option value="auto" data-i18n="opt_auto">📱 Auto Sistema</option>
+          <option value="dark" data-i18n="opt_dark">🌙 Scuro</option>
+          <option value="light" data-i18n="opt_light">☀️ Chiaro</option>
+        </select>
+      </div>
+
+      <!-- LANGUAGE -->
+      <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface);padding:12px 14px;border-radius:12px;border:1.5px solid var(--border);">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--text);" data-i18n="set_lang">Lingua / Language</div>
+          <div style="font-size:10px;color:var(--muted);" data-i18n="set_lang_desc">Lingua dell'applicazione</div>
+        </div>
+        <select id="langSelectMode" style="width:140px;height:38px;">
+          <option value="en">🇬🇧 English</option>
+          <option value="it">🇮🇹 Italiano</option>
+        </select>
+      </div>
+
+      <!-- AUDIO -->
+      <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface);padding:12px 14px;border-radius:12px;border:1.5px solid var(--border);">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--text);" data-i18n="set_audio">Feedback Acustico</div>
+          <div style="font-size:10px;color:var(--muted);" data-i18n="set_audio_desc">Segnali sonori rep e soglia</div>
+        </div>
+        <label class="tog-switch">
+          <input type="checkbox" id="audioToggle" checked>
+          <span class="tog-slider"></span>
+        </label>
+      </div>
+
+      <!-- VIBRAZIONE -->
+      <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface);padding:12px 14px;border-radius:12px;border:1.5px solid var(--border);">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--text);" data-i18n="set_vibe">Vibrazione Haptic</div>
+          <div style="font-size:10px;color:var(--muted);" data-i18n="set_vibe_desc">Feedback tattile su avvisi</div>
+        </div>
+        <label class="tog-switch">
+          <input type="checkbox" id="vibeToggle" checked>
+          <span class="tog-slider"></span>
+        </label>
+      </div>
+
+      <!-- COPYRIGHT BUTTON -->
+      <div id="btnOpenCopyright" style="display:flex;align-items:center;justify-content:space-between;background:var(--surface);padding:12px 14px;border-radius:12px;border:1.5px solid var(--border);cursor:pointer;transition:transform 0.1s;" onmousedown="this.style.transform='scale(0.98)'" onmouseup="this.style.transform='scale(1)'" onmouseleave="this.style.transform='scale(1)'">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--text);" data-i18n="set_legal">Note Legali e Copyright</div>
+          <div style="font-size:10px;color:var(--muted);" data-i18n="set_legal_desc">Termini d'uso e licenze</div>
+        </div>
+        <div style="color:var(--muted);font-size:18px;">›</div>
+      </div>
+
+      <!-- INFO VERSIONE -->
+      <div style="background:var(--surface);padding:12px 14px;border-radius:12px;border:1.5px solid var(--border);font-size:11px;color:var(--muted);line-height:1.5;">
+        <strong style="color:var(--text);">⚡ VBT-SMART v5.1 MATERIAL 3</strong><br>
+        Sviluppato da Antonino Tessio<br>
+        Motore Hardware MEMS + Giroscopio 3D
+      </div>
+    </div>
+
+    <button type="button" id="settingsOk" style="border:none;background:var(--blue);color:#fff;border-radius:10px;padding:12px;font-weight:600;cursor:pointer;text-align:center;" data-i18n="btn_close">Salva e Chiudi</button>
+  </div>
+</div>
+
+<!-- MODALE COPYRIGHT -->
+<div id="copyrightModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:2300;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:18px;max-width:380px;width:100%;padding:20px;box-shadow:0 24px 64px rgba(0,0,0,0.6);display:flex;flex-direction:column;gap:16px;max-height:85vh;">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <div style="font-size:16px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px;">
+        <span>⚖️</span> Note Legali e Copyright
+      </div>
+      <button type="button" id="copyrightClose" style="border:none;background:transparent;color:var(--muted);font-size:22px;line-height:1;cursor:pointer;">×</button>
+    </div>
+    
+    <div style="overflow-y:auto;font-size:12px;color:var(--text);line-height:1.5;padding-right:4px;display:flex;flex-direction:column;gap:10px;">
+      <p><strong>VBT-SMART</strong> &copy; 2026. Tutti i diritti riservati.</p>
+      <p>L'applicazione, i suoi contenuti, il codice sorgente, l'interfaccia grafica e i relativi marchi sono protetti dalle leggi sul diritto d'autore e sulla proprietà intellettuale. Nessuna parte di questa applicazione può essere riprodotta, distribuita o trasmessa in qualsiasi forma o con qualsiasi mezzo, senza il preventivo consenso scritto dell'autore.</p>
+      <p>L'uso di questa applicazione è concesso esclusivamente all'utente finale per uso personale. Qualsiasi utilizzo commerciale, reverse engineering, decompilazione o disassemblaggio del software è severamente vietato.</p>
+      <p>L'autore non si assume alcuna responsabilità per eventuali danni diretti, indiretti, accidentali o consequenziali derivanti dall'utilizzo dell'applicazione o dall'affidamento sui dati forniti dalla stessa.</p>
+    </div>
+
+    <button type="button" id="copyrightOk" style="border:none;background:var(--blue);color:#fff;border-radius:10px;padding:12px;font-weight:600;cursor:pointer;text-align:center;">Chiudi</button>
+  </div>
+</div>
+
+<!-- FINESTRA MODALE MATERIAL DESIGN 3 PER COMBOBOX DROPDOWN -->
+<div id="m3PickerModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:2500;align-items:flex-end;justify-content:center;padding:0;">
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:24px 24px 0 0;max-width:440px;width:100%;padding:22px;box-shadow:0 -12px 48px rgba(0,0,0,0.5);display:flex;flex-direction:column;gap:14px;max-height:80vh;">
+    <div style="width:36px;height:4px;background:var(--border);border-radius:4px;margin:0 auto 4px auto;"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <div id="m3PickerTitle" style="font-size:17px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px;">
+        <span>📋</span> Seleziona Opzione
+      </div>
+      <button type="button" id="m3PickerClose" style="border:none;background:transparent;color:var(--muted);font-size:24px;line-height:1;cursor:pointer;">×</button>
+    </div>
+    <div id="m3PickerOptions" style="display:flex;flex-direction:column;gap:8px;overflow-y:auto;max-height:55vh;padding-right:4px;"></div>
+  </div>
+</div>
 </body>
 </html>
+
