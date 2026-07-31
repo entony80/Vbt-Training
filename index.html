@@ -194,7 +194,7 @@ html[data-theme="dark"] .app,html[data-theme="dark"] .card,html[data-theme="dark
   <!-- HEADER -->
   <div class="header">
     <h1>⚡ VBT-SMART</h1>
-    <span class="version">v4.6.1 - Antonino Tessio</span>
+    <span class="version">v4.9 - Antonino Tessio</span>
     <div class="theme-toggle">
       <span class="theme-icon">🌙</span>
       <label class="tog-switch" title="Cambia tema">
@@ -430,12 +430,19 @@ html[data-theme="dark"] .app,html[data-theme="dark"] .card,html[data-theme="dark
         <div class="diag-cell"><div class="diag-axis">ASSE SEL.</div><div class="diag-val" id="dAsseAtt">—</div></div>
         <div class="diag-cell"><div class="diag-axis">HZ REALE</div><div class="diag-val" id="dHz">—</div></div>
       </div>
+      <div class="diag-grid">
+        <div class="diag-cell"><div class="diag-axis">GYRO β [°/s]</div><div class="diag-val" id="dGyroBeta">—</div></div>
+        <div class="diag-cell"><div class="diag-axis">GYRO γ [°/s]</div><div class="diag-val" id="dGyroGamma">—</div></div>
+        <div class="diag-cell"><div class="diag-axis">θ CF [°]</div><div class="diag-val" id="dCFTheta">—</div></div>
+      </div>
       <div class="diag-pills">
         <span class="pill" id="pStato">pronto</span>
         <span class="pill" id="pCamp">campioni: 0</span>
         <span class="pill" id="pCal">non calibrato</span>
         <span class="pill" id="pAsse">Auto - Asse:</span>
         <span class="pill" id="pAlpha">α LPF: —</span>
+        <span class="pill" id="pCF">CF: —</span>
+        <span class="pill" id="pWakeLock">🔆 schermo: libero</span>
       </div>
     </div>
   </div>
@@ -462,13 +469,23 @@ html[data-theme="dark"] .app,html[data-theme="dark"] .card,html[data-theme="dark
     <!-- Aggiungi nuovo -->
     <div style="border-top:1px solid var(--border);padding-top:12px;">
       <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;">Aggiungi esercizio</div>
-      <div style="display:flex;gap:8px;">
+      <div style="display:flex;gap:8px;margin-bottom:6px;">
         <input type="text" id="newEsNome" placeholder="Nome esercizio"
                style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);
                       color:var(--text);font-size:14px;padding:9px 11px;outline:none;font-family:var(--font-ui);">
+        <input type="number" id="newEsFc" value="4.0" min="1" max="12" step="0.5" title="Freq. taglio LPF (Hz)"
+               style="width:66px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);
+                      color:var(--text);font-size:14px;padding:9px 8px;outline:none;font-family:var(--font-ui);text-align:center;">
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-bottom:6px;">
         <button type="button" id="addEsBtn"
                 style="border:none;background:var(--blue);color:#fff;border-radius:var(--r-sm);
                        padding:9px 14px;font-weight:700;cursor:pointer;font-size:14px;white-space:nowrap;">+ Aggiungi</button>
+        <button type="button" id="fcHelpBtn"
+                style="border:1px solid var(--border);background:transparent;color:var(--muted);
+                       border-radius:var(--r-sm);padding:9px 13px;cursor:pointer;font-size:14px;
+                       font-weight:700;line-height:1;"
+                title="Cos'è la frequenza di taglio?">?</button>
       </div>
       <div id="addEsErr" style="font-size:11px;color:var(--red);margin-top:5px;display:none;"></div>
     </div>
@@ -483,6 +500,91 @@ html[data-theme="dark"] .app,html[data-theme="dark"] .card,html[data-theme="dark
               style="border:none;background:var(--blue);color:#fff;border-radius:10px;
                      padding:10px 16px;font-weight:600;cursor:pointer;">Chiudi</button>
     </div>
+  </div>
+</div>
+
+<!-- ── Modale spiegazione frequenza di taglio fc ── -->
+<div id="fcHelpModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:2100;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;max-width:400px;width:100%;
+              padding:20px;box-shadow:0 24px 64px rgba(0,0,0,.5);max-height:88vh;overflow-y:auto;display:flex;flex-direction:column;gap:14px;">
+
+    <!-- header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+      <div style="font-size:15px;font-weight:700;color:var(--text);">Frequenza di taglio LPF (fc)</div>
+      <button type="button" id="fcHelpClose"
+              style="border:none;background:transparent;color:var(--muted);font-size:22px;line-height:1;cursor:pointer;">×</button>
+    </div>
+
+    <!-- cos'è -->
+    <div>
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Cos'è</div>
+      <div style="font-size:13px;color:var(--text);line-height:1.6;">
+        L'accelerometro genera un segnale continuo pieno di <strong>rumore elettronico MEMS</strong> (vibrazione strutturale del telefono, rimbalzi, microoscillazioni). Prima di integrare l'accelerazione per ottenere la velocità, il segnale passa attraverso un <strong>filtro passa-basso IIR</strong> che lascia passare solo le componenti lente (il movimento reale) e blocca quelle veloci (il rumore).
+      </div>
+      <div style="font-size:13px;color:var(--text);line-height:1.6;margin-top:8px;">
+        <strong>fc</strong> è la frequenza oltre la quale il filtro inizia ad attenuare il segnale. Più è bassa, più è aggressivo il filtraggio.
+      </div>
+    </div>
+
+    <!-- formula -->
+    <div style="background:var(--surface);border-radius:var(--r-sm);padding:12px 14px;font-size:12px;color:var(--muted);line-height:1.7;font-family:var(--font-data);">
+      α = 2π · fc · (1/Hz<sub style="font-size:10px;">sensore</sub>) / (2π · fc · (1/Hz<sub style="font-size:10px;">sensore</sub>) + 1)<br>
+      <span style="color:var(--text);">Esempio fc=4Hz a 50Hz:</span> α ≈ 0.334 → filtro aggressivo<br>
+      <span style="color:var(--text);">Esempio fc=8Hz a 50Hz:</span> α ≈ 0.501 → filtro leggero
+    </div>
+
+    <!-- tabella esercizi -->
+    <div>
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Valori consigliati per categoria</div>
+      <div style="display:flex;flex-direction:column;gap:5px;">
+
+        <div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;
+                    background:var(--surface);border-radius:var(--r-sm);padding:8px 10px;">
+          <div style="font-size:13px;color:var(--text);font-weight:600;">Forza / Ipertrofia</div>
+          <div style="font-size:11px;color:var(--muted);">Squat · Bench · Deadlift · Hip Thrust</div>
+          <div style="font-size:13px;font-weight:700;color:var(--blue);white-space:nowrap;">3.5 – 4.5 Hz</div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;
+                    background:var(--surface);border-radius:var(--r-sm);padding:8px 10px;">
+          <div style="font-size:13px;color:var(--text);font-weight:600;">Potenza / Balistica</div>
+          <div style="font-size:11px;color:var(--muted);">Jump Squat · Push Press · Bench Throw</div>
+          <div style="font-size:13px;font-weight:700;color:var(--orange);white-space:nowrap;">6.5 – 7.5 Hz</div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;
+                    background:var(--surface);border-radius:var(--r-sm);padding:8px 10px;">
+          <div style="font-size:13px;color:var(--text);font-weight:600;">Olimpico</div>
+          <div style="font-size:11px;color:var(--muted);">Clean · Snatch · Hang Pull</div>
+          <div style="font-size:13px;font-weight:700;color:var(--green);white-space:nowrap;">7.5 – 9 Hz</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- cosa succede se sbaglio -->
+    <div>
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Cosa succede se il valore è sbagliato</div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <div style="background:var(--surface);border-radius:var(--r-sm);padding:9px 12px;border-left:3px solid var(--red);">
+          <div style="font-size:12px;font-weight:700;color:var(--red);margin-bottom:3px;">fc troppo bassa (es. 4 Hz per uno Snatch)</div>
+          <div style="font-size:12px;color:var(--text);line-height:1.5;">Il filtro <strong>taglia il picco di velocità</strong>: un pull da 250 ms risulta attenuato del 40–60%. La velocità misurata appare artificialmente bassa e il VL risulta falsamente elevato.</div>
+        </div>
+        <div style="background:var(--surface);border-radius:var(--r-sm);padding:9px 12px;border-left:3px solid var(--orange);">
+          <div style="font-size:12px;font-weight:700;color:var(--orange);margin-bottom:3px;">fc troppo alta (es. 9 Hz per uno Squat)</div>
+          <div style="font-size:12px;color:var(--text);line-height:1.5;">Il rumore MEMS passa il filtro e si integra due volte (acc → vel → pos). Su una rep da 1s, <strong>0.2 m/s² di rumore residuo</strong> produce un drift di velocità di ≈0.04 m/s, abbastanza da creare rep fantasma o vel fuori soglia.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- regola pratica -->
+    <div style="background:var(--surface);border-radius:var(--r-sm);padding:11px 13px;font-size:12px;color:var(--muted);line-height:1.6;border-left:3px solid var(--blue);">
+      <strong style="color:var(--text);">Regola pratica:</strong> fc ≈ 2 / durata_concentrica_in_secondi. Squat pesante 0.5s → fc ≈ 4 Hz. Jump Squat 0.15s → fc ≈ 6–7 Hz. Clean 0.12s pull → fc ≈ 8 Hz.
+    </div>
+
+    <button type="button" id="fcHelpOk"
+            style="border:none;background:var(--blue);color:#fff;border-radius:10px;
+                   padding:10px 16px;font-weight:600;cursor:pointer;align-self:flex-end;">Chiudi</button>
   </div>
 </div>
 
@@ -726,9 +828,11 @@ document.addEventListener('DOMContentLoaded',()=>{const b=document.getElementByI
     if (list.some(e => e.key===key || e.nome.toLowerCase()===nome.toLowerCase())) {
       err.textContent='Esercizio già presente.'; err.style.display='block'; return;
     }
-    list.push({key, nome});
+    const fc = Math.min(12, Math.max(1, parseFloat(document.getElementById('newEsFc')?.value) || 4.0));
+    list.push({key, nome, fc});
     salvaEsercizi(list);
     inp.value = '';
+    document.getElementById('newEsFc').value = '4.0';
     renderEsList();
     buildEsCombo(key);
   });
@@ -740,6 +844,15 @@ document.addEventListener('DOMContentLoaded',()=>{const b=document.getElementByI
     renderEsList();
     buildEsCombo('squat');
   });
+
+  /* ── modale spiegazione fc ── */
+  const mFcHelp   = document.getElementById('fcHelpModal');
+  const closeFcH  = () => { if(mFcHelp) mFcHelp.style.display='none'; };
+  const openFcH   = () => { if(mFcHelp) mFcHelp.style.display='flex'; };
+  document.getElementById('fcHelpBtn')?.addEventListener('click', openFcH);
+  ['fcHelpClose','fcHelpOk'].forEach(id =>
+    document.getElementById(id)?.addEventListener('click', closeFcH));
+  mFcHelp?.addEventListener('click', e => { if(e.target===mFcHelp) closeFcH(); });
 });
 
 /* ═══════════════════════════════════════════════
@@ -753,6 +866,12 @@ const S = {
   calibrato: false,
   offX: 0, offY: 0, offZ: 0,
   noiseFloor: 0.18,   // m/s² — aggiornato dinamicamente a calibrazione
+  // ── Filtro Complementare (sensor fusion acc + gyro) ──
+  cf_theta: 0.0,      // stima orientamento [rad] sull'asse rilevante
+  cf_gBias: 0.0,      // stima bias giroscopio [rad/s]
+  cf_init:  false,    // true dopo il primo campione valido
+  // fc LPF dell'esercizio selezionato — aggiornato da aggiornaSoglie()
+  fcEsercizio: 4.0,
   // asse selezionato: 'auto'|'x'|'y'|'z'
   asse: 'auto',
   // FIX BUG 5: asse fissato in calibrazione (non ricalcolato ogni campione)
@@ -800,6 +919,38 @@ const S = {
   repStartT: 0,    // performance.now() inizio rep
   lastRepEndT: null, // performance.now() fine ultima rep (per periodo refrattario)
 };
+
+/* ═══════════════════════════════════════════════
+   WAKE LOCK — impedisce lo spegnimento schermo
+═══════════════════════════════════════════════ */
+let _wakeLock = null;
+
+function _wlPill(stato) {
+  const el = document.getElementById('pWakeLock');
+  if (!el) return;
+  if (stato === 'attivo') { el.textContent = '🔆 schermo: attivo'; el.className = 'pill ok'; }
+  else if (stato === 'nd') { el.textContent = '🔆 schermo: n/d';   el.className = 'pill'; }
+  else                     { el.textContent = '🔆 schermo: libero'; el.className = 'pill'; }
+}
+
+async function requestWakeLock() {
+  if (!('wakeLock' in navigator)) { _wlPill('nd'); return; }
+  try {
+    _wakeLock = await navigator.wakeLock.request('screen');
+    _wlPill('attivo');
+    _wakeLock.addEventListener('release', () => { _wakeLock = null; _wlPill('libero'); });
+  } catch (_e) { _wlPill('nd'); }
+}
+
+function releaseWakeLock() {
+  if (_wakeLock) { _wakeLock.release(); _wakeLock = null; }
+  _wlPill('libero');
+}
+
+// Riacquisisce il lock quando l'app torna in foreground e la serie è ancora attiva
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && S.attiva) requestWakeLock();
+});
 
 /* ═══════════════════════════════════════════════
    AUDIO
@@ -907,6 +1058,7 @@ const SOGLIE = {
   pclean:   {min:.80,tgt:1.20},
   hipthrust:{min:.30,tgt:.60},
   ohp:      {min:.20,tgt:.40},
+  jumpsquat:{min:.80,tgt:1.10},
 };
 const VBT_1RM = [
   {pct:90, maxReps:2, reps:[0.49,0.52,null,null,null,null]},
@@ -959,6 +1111,13 @@ function getVCapByPct(pct) {
    Tolleranza ±35%: la curva ha variabilità inter-individuale reale.
    Ritorna { ok, troppoAlto, troppoBasso, expected, maxP, minP, label }. */
 function validaCoerenza(vMedia, pct1RM, repN) {
+  // FIX v4.8 Bug7: esercizi olimpici/esplosivi (fc ≥ 7: Power Clean fc=8, Jump Squat fc=7)
+  // producono vMedia reale 1.5–2.5 m/s, ben oltre il massimo della tabella VBT_1RM
+  // (1.20 m/s a 43%). Senza bypass, troppoAlto è sempre vero → "🚨 Drift sensore"
+  // falso positivo su ogni rep. La tabella è specifica per esercizi di forza (Squat,
+  // Bench, Deadlift) e non si applica ai movimenti olimpici.
+  if (S.fcEsercizio >= 7) return { ok: true, label: '' };
+
   const entry = VBT_1RM.find(r => r.pct === pct1RM)
     || [...VBT_1RM].sort((a,b) => Math.abs(a.pct - pct1RM) - Math.abs(b.pct - pct1RM))[0];
   if (!entry) return { ok: true };
@@ -992,12 +1151,13 @@ function validaCoerenza(vMedia, pct1RM, repN) {
    Struttura: [{key, nome}]  (key = slug univoco)
 ═══════════════════════════════════════════════ */
 const ES_DEFAULT = [
-  {key:'squat',     nome:'Squat'},
-  {key:'bench',     nome:'Bench Press'},
-  {key:'deadlift',  nome:'Deadlift'},
-  {key:'pclean',    nome:'Power Clean'},
-  {key:'hipthrust', nome:'Hip Thrust'},
-  {key:'ohp',       nome:'Overhead Press'},
+  {key:'squat',     nome:'Squat',          fc:4.0},
+  {key:'bench',     nome:'Bench Press',    fc:4.0},
+  {key:'deadlift',  nome:'Deadlift',       fc:4.5},
+  {key:'pclean',    nome:'Power Clean',    fc:8.0},
+  {key:'hipthrust', nome:'Hip Thrust',     fc:4.0},
+  {key:'ohp',       nome:'Overhead Press', fc:4.5},
+  {key:'jumpsquat', nome:'Jump Squat',     fc:7.0},
 ];
 
 function slugEs(nome) {
@@ -1008,7 +1168,14 @@ function slugEs(nome) {
 function leggiEsercizi() {
   try {
     const raw = localStorage.getItem('vbt_esercizi');
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const list = JSON.parse(raw);
+      // Migrazione: entry senza fc (versioni precedenti) ereditano fc da ES_DEFAULT o 4.0
+      return list.map(e => ({
+        ...e,
+        fc: e.fc ?? (ES_DEFAULT.find(d => d.key === e.key)?.fc ?? 4.0)
+      }));
+    }
   } catch(e) {}
   return ES_DEFAULT.map(e => ({...e}));
 }
@@ -1047,12 +1214,13 @@ function renderEsList() {
     `<div style="display:flex;align-items:center;gap:8px;background:var(--surface);
                  border-radius:var(--r-sm);padding:8px 10px;border:1px solid var(--border);">
        <span style="flex:1;font-size:13px;color:var(--text);">${e.nome}</span>
+       <span style="font-size:10px;color:var(--muted);letter-spacing:.3px;white-space:nowrap;">fc ${(e.fc??4).toFixed(1)} Hz</span>
        ${i >= ES_DEFAULT.length
          ? `<button type="button" onclick="eliminaEs('${e.key}')"
                     style="border:none;background:transparent;color:var(--muted);
                            font-size:16px;cursor:pointer;line-height:1;padding:0 2px;"
                     title="Elimina">🗑</button>`
-         : `<span style="font-size:10px;color:var(--muted);letter-spacing:.5px;">DEFAULT</span>`
+         : `<span style="font-size:10px;color:var(--muted);letter-spacing:.5px;">DEF</span>`
        }
      </div>`
   ).join('');
@@ -1095,6 +1263,9 @@ function aggiornaSoglie() {
   const s = SOGLIE[k] || {min:.30,tgt:.55};
   document.getElementById('inSMin').value = s.min.toFixed(2);
   document.getElementById('inSTgt').value = s.tgt.toFixed(2);
+  // Propaga fc dell'esercizio selezionato allo stato
+  const esFound = leggiEsercizi().find(e => e.key === k);
+  S.fcEsercizio = esFound?.fc ?? 4.0;
   aggiornaSoglie1RM();
 }
 /* ═══════════════════════════════════════════════
@@ -1254,6 +1425,11 @@ function _calHandler(ev) {
   _calCampY.push(y);
   _calCampZ.push(z);
 
+  /* FIX 8: scarta i primi 8 campioni (settling time dell'interrupt MEMS).
+     All'attivazione del listener il primo burst di eventi può contenere
+     campioni con spike da interrupt del sistema operativo. */
+  if (_calCampX.length <= 8) return;
+
   /* FIX v4.1: raccogli SEMPRE accelerationIncludingGravity in array separati
      per il rilevamento dell'asse dominante (= asse in cui la gravità è più alta).
      Questo è indipendente da useAccPura: anche se usiamo aPura per gli offset,
@@ -1374,6 +1550,16 @@ function _completaCalibrazione() {
 
   // Salva sempre l'asse appena rilevato; il confronto manuale usa questo valore freschissimo.
   S.asseAuto = asseRilevato || 'z';
+
+  /* FIX 1: noiseFloor ricalcolato sull'asse effettivo rilevato.
+     Prima era sempre Z — su MEMS anisotropici Y o X hanno σ diversa fino al 40%.
+     Usa _calCampX/Y/Z che sono già stati accumulati da _calHandler. */
+  const _calAxisArr = S.asseAuto === 'x' ? _calCampX
+                    : S.asseAuto === 'y' ? _calCampY
+                    : _calCampZ;
+  const _muAxis = media(_calAxisArr);
+  const _sigmaAxis = stdDev(_calAxisArr, _muAxis);
+  S.noiseFloor = Math.min(0.50, Math.max(0.05, _sigmaAxis));
 
   const modoStr = S.useAccPura ? 'acc.pura' : 'acc+g';
   const asseEff = S.asseAuto.toUpperCase();
@@ -1502,13 +1688,24 @@ function avvia() {
   S.romCm = 0; S.durMs = 0; S.tPiccoMs = 0;
   S.meanPowerW = 0; S.accelIdx = 0; S.stima1RM = 0;
   S._vlWarned = false;  // reset avviso VL per nuova serie
+  // FIX v4.8 Bug2: snapshot carico al momento dell'avvio — evita che
+  // modifiche del campo durante la serie producano kg diversi per ogni rep.
+  S.caricoKg = parseFloat(document.getElementById('inCarico')?.value) || 0;
   _azLPF = 0;   // reset filtro IIR all'avvio serie
+  // FIX 6: parte con cf_init=true e theta=0 invece di aspettare il primo
+  // campione live (potenzialmente rumoroso). Post-calibrazione l'asse è
+  // già zerato dagli offset, quindi θ a riposo = 0 per costruzione.
+  S.cf_theta = 0.0;
+  S.cf_init  = S.calibrato;  // già inizializzato se l'utente ha calibrato
   // Reset contatori interni tick
   tickAlgoritmo._preRep     = 0;
   tickAlgoritmo._preRepHigh = 0;  // V4.5: reset contatore doppia soglia
   tickAlgoritmo._quietCont  = 0;
   tickAlgoritmo._decCont    = 0;
   tickAlgoritmo._quietPost  = 0;  // FIX v4.4: reset esplicito – evita residui di sessioni precedenti
+  tickAlgoritmo._nfBuf      = []; // FIX v4.8 Bug4: reset buffer EMA noiseFloor — evita
+                                  // contaminazione tra serie (campioni di quiete serie N
+                                  // non devono influenzare il primo aggiornamento di serie N+1)
 
   document.getElementById('numRep').textContent   = '0';
   document.getElementById('numPicco').textContent = '—';
@@ -1534,6 +1731,7 @@ function avvia() {
   const setSumEl = document.getElementById('setSummary');
   if (setSumEl) setSumEl.style.display = 'none';
 
+  requestWakeLock();
   toast('🔴 Serie avviata');
   parla('Serie avviata');
 }
@@ -1560,6 +1758,10 @@ function ferma() {
   const inNS = document.getElementById('inNSerie');
   if (inNS) inNS.value = nSerie + 1;
 
+  // FIX v4.9 BugB: resetta _diagVel → il display "Vel. integrata" torna a 0.00
+  // dopo ferma(), invece di congelare sull'ultima velocità della serie.
+  _diagVel = 0;
+  releaseWakeLock();
   toast(`Serie terminata: ${S.repN} ripetizioni`);
 }
 
@@ -1580,7 +1782,10 @@ function aggiornaSetSummary() {
   el.style.display = 'grid';
   el.innerHTML =
     cell('V.Media', avg(vMs).toFixed(2)+' m/s', 'var(--blue)') +
-    cell('V.Picco', Math.max(...vPs).toFixed(2)+' m/s', 'var(--green)') +
+    // FIX v4.8 Bug6: Math.max(...vPs) con spread può dare stack overflow su Android
+    // V8 con array grandi (> 20 rep). Replace con reduce identico al fix già applicato
+    // su S.vel in calcolaRep().
+    cell('V.Picco', vPs.reduce((a,b)=>b>a?b:a, -Infinity).toFixed(2)+' m/s', 'var(--green)') +
     cell('Loss%',   S.vLoss.toFixed(1)+'%',     S.vLoss > 20 ? 'var(--red)' : 'var(--green)') +
     cell('ROM med', avg(roms).toFixed(0)+' cm',  'var(--text)') +
     cell('Potenza', pWs[0]>0 ? avg(pWs).toFixed(0)+' W' : '—', 'var(--orange)') +
@@ -1592,7 +1797,10 @@ function aggiornaSetSummary() {
    LETTURA SOGLIE DAI CAMPI
 ═══════════════════════════════════════════════ */
 function leggiSoglie() {
-  S.sogAtt = parseFloat(document.getElementById('inSogAtt').value) || 0.8;
+  // FIX v4.8 Bug1: clamp [0.1, 5.0] — || 0.8 cattura solo NaN/0, non valori negativi.
+  // Un sogAtt negativo rende azN > S.sogAtt sempre vero → falsi rep continui.
+  const _sogAttRaw = parseFloat(document.getElementById('inSogAtt').value);
+  S.sogAtt = (isNaN(_sogAttRaw) || _sogAttRaw <= 0) ? 0.8 : Math.min(5.0, Math.max(0.1, _sogAttRaw));
   S.sogMin = parseFloat(document.getElementById('inSMin').value)   || 0.30;
   S.sogTgt = parseFloat(document.getElementById('inSTgt').value)   || 0.55;
   S.pct1RM = parseInt(document.getElementById('sel1RM')?.value || '75', 10);
@@ -1613,11 +1821,12 @@ let _diagRaw = 0, _diagFilt = 0, _diagVel = 0;
    Con fc=4Hz e dt dipendente da Hz reale (es. 50Hz→dt=0.020 → α≈0.333).
    Clamp [0.15, 0.55] per sicurezza su device molto lenti o molto veloci.
 */
-function _calcAlphaLPF(hzReal) {
-  const fc = 4.0; // Hz taglio target
+// fc: Hz di taglio target — dipende dall'esercizio (4 Hz squat, 7 jump, 8 olimpico)
+// Il clamp superiore sale a 0.70 per coprire fc alte su device a 30-40 Hz
+function _calcAlphaLPF(hzReal, fc = 4.0) {
   const dt = hzReal > 0 ? 1 / hzReal : 0.020;
   const w  = 2 * Math.PI * fc * dt;
-  return Math.min(0.55, Math.max(0.15, w / (w + 1)));
+  return Math.min(0.70, Math.max(0.15, w / (w + 1)));
 }
 
 function tickAlgoritmo(e) {
@@ -1674,12 +1883,63 @@ function tickAlgoritmo(e) {
   // dtEff: usa dt reale misurato; se anomalo cade sul nominale
   const dtEff = (dt >= 0.005 && dt <= 0.100) ? dt : dtNominale;
 
-  const azN_raw = getAzNetto();
+  const azN_raw_pre = getAzNetto();
+
+  /* ── Filtro Complementare monoasse (sensor fusion acc + gyro) ──────────
+     Stima e rimuove la componente di gravità dinamica introdotta
+     dall'inclinazione del telefono durante il sollevamento.
+     Anche 2-3° producono g·sin(θ) ≈ 0.3-0.5 m/s² → errore velocità 20-40%.
+
+     Mapping asse → rotationRate:
+       asse Z (piano) / Y (portrait) → rotationRate.beta  (pitch)
+       asse X (fianco)               → rotationRate.gamma (roll)
+     rotationRate in gradi/s su tutti i browser moderni → ×π/180.
+     Safe fallback: se rotationRate non disponibile, azN_raw = azN_raw_pre.
+  ────────────────────────────────────────────────────────────────────── */
+  const CF_TAU  = 0.30;
+  const DEG2RAD = Math.PI / 180;
+  let azN_raw   = azN_raw_pre;
+
+  const rr = e.rotationRate;
+  if (rr && rr.beta !== null && rr.gamma !== null) {
+    const asseEff    = (S.asse !== 'auto') ? S.asse : S.asseAuto;
+    const omega_degs = (asseEff === 'x') ? (rr.gamma ?? 0) : (rr.beta ?? 0);
+    const omega_rads = omega_degs * DEG2RAD;
+    const g_nom      = 9.81;
+    const sinTheta   = Math.min(1.0, Math.max(-1.0, azN_raw_pre / g_nom));
+    const theta_acc  = Math.asin(sinTheta);
+    if (!S.cf_init) {
+      S.cf_theta = theta_acc;
+      S.cf_init  = true;
+    } else {
+      const cf_alpha = CF_TAU / (CF_TAU + dtEff);
+      S.cf_theta = cf_alpha * (S.cf_theta + (omega_rads - S.cf_gBias) * dtEff)
+                 + (1 - cf_alpha) * theta_acc;
+    }
+    // Aggiornamento bias giroscopio durante la quiete
+    if (!S.inRep && tickAlgoritmo._quietCont >= 4) {
+      const bias_alpha = dtEff / (5.0 + dtEff);
+      S.cf_gBias = bias_alpha * omega_rads + (1 - bias_alpha) * S.cf_gBias;
+    }
+    azN_raw = azN_raw_pre - g_nom * Math.sin(S.cf_theta);
+  }
+
+  // FIX v4.8 Bug5: spike rejection — reintroduce il controllo documentato in v4.5.3
+  // ma perso in una riscrittura intermedia. Spike da interrupt OS durano < 1 campione
+  // e producono |azN_raw| fisicamente impossibili (> 18 m/s² ≈ 1.8g su asse netto).
+  // Se scartati PRIMA del LPF evitano che il filtro IIR si "drogui" e propaghi
+  // il picco ai 3-5 campioni successivi (costante di tempo α ≈ 0.33 → τ ≈ 3 tick).
+  if (!tickAlgoritmo._joltCount) tickAlgoritmo._joltCount = 0;
+  if (Math.abs(azN_raw) > 18) {
+    tickAlgoritmo._joltCount++;
+    return; // scarta campione senza aggiornare LPF né integratore
+  }
+
   // V4.5: Filtro IIR passa-basso con alpha ADATTIVO basato su Hz reale.
   // Target fc = 4 Hz: elimina rumore MEMS senza attenuare la spinta concentrica
   // (i movimenti di sollevamento hanno contenuto spettrale < 2 Hz).
   // Alpha si adatta automaticamente: 50Hz→α≈0.333, 100Hz→α≈0.200, 25Hz→α≈0.500.
-  const _alpha = _calcAlphaLPF(S.hzReal || 50);
+  const _alpha = _calcAlphaLPF(S.hzReal || 50, S.fcEsercizio);
   _azLPF = _alpha * azN_raw + (1 - _alpha) * _azLPF;
   const azN = _azLPF;
   // V4.5: aggiorna variabili diagnostica 3 livelli
@@ -1704,9 +1964,30 @@ function tickAlgoritmo(e) {
     document.getElementById('dAzN').textContent     = _diagFilt.toFixed(3);
     document.getElementById('pCamp').textContent    = 'campioni: ' + S.camp.length;
     // V4.5: mostra alpha adattivo nella pill diagnostica
-    const _alphaDisp = _calcAlphaLPF(S.hzReal || 50);
+    const _alphaDisp = _calcAlphaLPF(S.hzReal || 50, S.fcEsercizio);
     const pAlphaEl = document.getElementById('pAlpha');
-    if (pAlphaEl) pAlphaEl.textContent = `α LPF: ${_alphaDisp.toFixed(3)} (${S.hzReal||'?'}Hz)`;
+    if (pAlphaEl) pAlphaEl.textContent = `α LPF: ${_alphaDisp.toFixed(3)} fc:${S.fcEsercizio.toFixed(1)}Hz`;
+    // V4.6: diagnostica giroscopio + filtro complementare
+    const _dGyroBeta  = document.getElementById('dGyroBeta');
+    const _dGyroGamma = document.getElementById('dGyroGamma');
+    const _dCFTheta   = document.getElementById('dCFTheta');
+    const _pCF        = document.getElementById('pCF');
+    if (_dGyroBeta && _dGyroGamma && _dCFTheta && _pCF) {
+      if (rr && rr.beta !== null && rr.gamma !== null) {
+        _dGyroBeta.textContent  = (rr.beta  ?? 0).toFixed(1);
+        _dGyroGamma.textContent = (rr.gamma ?? 0).toFixed(1);
+        _dCFTheta.textContent   = (S.cf_theta * 180 / Math.PI).toFixed(2);
+        const _biasDegs = (S.cf_gBias * 180 / Math.PI).toFixed(2);
+        _pCF.textContent = `CF: ${S.cf_init ? 'attivo' : 'init'} bias:${_biasDegs}°/s`;
+        _pCF.className   = S.cf_init ? 'pill ok' : 'pill warn';
+      } else {
+        _dGyroBeta.textContent  = 'n/d';
+        _dGyroGamma.textContent = 'n/d';
+        _dCFTheta.textContent   = 'n/d';
+        _pCF.textContent        = 'CF: fallback';
+        _pCF.className          = 'pill warn';
+      }
+    }
     /* FIX v4.4: diagnostica stato refrattario visibile
        Prima: sempre "⬤ attesa" tra le rep → impossibile capire quando il
        periodo refrattario era attivo e perché una rep non partiva.
@@ -1762,15 +2043,31 @@ function tickAlgoritmo(e) {
     // -- Fase 2: richiedi QUIET_POST_REP_N campioni sotto soglia --
     if (S.lastRepEndT) {
       if (!tickAlgoritmo._quietPost) tickAlgoritmo._quietPost = 0;
+      if (!tickAlgoritmo._nfBuf)     tickAlgoritmo._nfBuf     = [];
       if (azN <= S.sogAtt) {
         tickAlgoritmo._quietPost++;
+        tickAlgoritmo._nfBuf.push(azN); // accumula per EMA noiseFloor
       } else {
         tickAlgoritmo._quietPost = 0;
+        tickAlgoritmo._nfBuf    = [];
       }
       if (tickAlgoritmo._quietPost < QUIET_POST_REP_N) {
         tickAlgoritmo._preRep = 0;
         return;
       }
+      /* FIX 7: quiete confermata — aggiorna noiseFloor con EMA (τ≈10 rep).
+         Compensa la deriva termica MEMS nelle sessioni lunghe: dopo 45-60 min
+         il rumore può crescere del 20-40%; la stima di calibrazione diventa
+         ottimistica e ZVU_THR risulta troppo stretto.
+         EMA α=0.10 → peso dell'ultima misura ≈10%, storia ≈90%. */
+      const _nfBuf = tickAlgoritmo._nfBuf;
+      if (_nfBuf.length >= QUIET_POST_REP_N) {
+        const _nfMu  = _nfBuf.reduce((a,b)=>a+b,0) / _nfBuf.length;
+        const _nfVar = _nfBuf.reduce((a,b)=>a+(b-_nfMu)*(b-_nfMu),0) / _nfBuf.length;
+        const _nfSig = Math.min(0.50, Math.max(0.05, Math.sqrt(_nfVar)));
+        S.noiseFloor = 0.10 * _nfSig + 0.90 * S.noiseFloor;
+      }
+      tickAlgoritmo._nfBuf = [];
       // Quiete confermata: annulla lastRepEndT per non ri-controllare
       S.lastRepEndT = null;
       tickAlgoritmo._quietPost = 0;
@@ -1822,20 +2119,6 @@ function tickAlgoritmo(e) {
   const ultimaV = S.vel[S.vel.length - 1];
   const aPrec   = S.camp.length >= 2 ? S.camp[S.camp.length - 2] : azN;
   let nuovaV    = ultimaV + ((aPrec + azN) / 2) * dtEff;
-  // Il drift è gestito da: (1) LPF adattivo fc=4Hz prima dell'integrazione,
-  // (2) ZVU sotto che azzera quando il segnale è sotto soglia quiete ≥ 4 camp,
-  // (3) decadimento esponenziale τ=1s (vedi sotto).
-
-  /* ── Decadimento esponenziale anti-drift (τ = 1s) ───────────────────
-     Riduce il drift residuo che si accumula quando ZVU non scatta
-     (segnale sopra soglia ma nessun movimento reale, es. tremore involontario).
-     Formula: v(n) = v(n-1) · exp(-dtEff / τ)
-     Con τ=1s e dt=20ms: fattore = exp(-0.02) ≈ 0.980 per campione
-     → attenuazione ~50% in 1 secondo di non-movimento → trascurabile
-     durante una rep reale (durata 0.5-1.5s), efficace sul drift lento.
-  ──────────────────────────────────────────────────────────────────── */
-  const DECAY_TAU = 1.0;
-  nuovaV *= Math.exp(-dtEff / DECAY_TAU);
 
   // ── Zero-Velocity Update (ZVU) ──
   // Se azN è sotto la soglia di rumore per ≥ 4 campioni consecutivi,
@@ -1856,6 +2139,22 @@ function tickAlgoritmo(e) {
     }
   } else {
     tickAlgoritmo._quietCont = 0;
+  }
+
+  /* ── Decadimento esponenziale anti-drift (τ = 1s) — SOLO in quiete ────
+     FIX v4.9 BugA: il decay originale era applicato ad OGNI campione (anche
+     durante la concentrica), introducendo un errore sistematico di -10..16%
+     su vPicco e vMedia (simulato: squat 85% → -11.6%, bench 75% → -15.7%).
+     Fix: decay attivo SOLO quando quietCont >= 1 (sensore in fase di quiete
+     o sticking point). Durante la spinta concentrica vera (quietCont = 0)
+     non viene applicata alcuna attenuazione → integrazione fedele.
+     τ=1s, dt=20ms: exp(-0.02) ≈ 0.980 — durante lo sticking point (quiete
+     reale all'interno della rep) smorzamento lento del drift residuo senza
+     azzerare la velocità pre-acquisita dalla fase precedente.
+  ────────────────────────────────────────────────────────────────────── */
+  if (tickAlgoritmo._quietCont >= 1) {
+    const DECAY_TAU = 1.0;
+    nuovaV *= Math.exp(-dtEff / DECAY_TAU);
   }
 
   // ── Cap fisico di plausibilità (hard-cap anti-drift) ──
@@ -1883,9 +2182,13 @@ function tickAlgoritmo(e) {
      Condizioni (tutte e tre devono essere vere):
      A. Durata minima raggiunta (≥ 20 camp ≈ 400ms): esclude spike brevi
      B. Accelerazione tornata sotto il 60% della soglia di attivazione
-        per almeno 5 campioni consecutivi (decelerazione sostenuta)
-     C. Velocità scesa sotto il 25% del picco intra-rep
-        (bilanciere ha quasi fermato la salita)
+        per almeno DEC_N campioni consecutivi (decelerazione sostenuta).
+        DEC_N è adattivo: esercizi veloci (fc alto) hanno decelerazione
+        più breve — richiedono meno campioni di conferma.
+        fc ≤ 5 → 5 camp (100ms); fc 6-7 → 4 camp (80ms); fc ≥ 8 → 3 camp (60ms)
+     C. Velocità scesa sotto il 25% del picco intra-rep, E il picco
+        raggiunto supera noiseFloor×3 (guard anti-sticking-point:
+        evita che ZVU durante punto morto termini la rep prematuramente)
   ══════════════════════════════════════════ */
   if (!tickAlgoritmo._decCont) tickAlgoritmo._decCont = 0;
   const accBassa = Math.abs(azN) < S.sogAtt * 0.6;
@@ -1895,9 +2198,15 @@ function tickAlgoritmo(e) {
     tickAlgoritmo._decCont = 0;
   }
 
+  // DEC_N adattivo: Olympic fc≥8 → 3, potenza fc 6-7 → 4, forza fc≤5 → 5
+  const _fc  = S.fcEsercizio || 4.0;
+  const DEC_N = _fc >= 8 ? 3 : _fc >= 6 ? 4 : 5;
+  // MAX_CAMP adattivo: Olympic/potenza → 3s; forza → 7s
+  const MAX_CAMP = Math.round((S.hzReal || 50) * (_fc >= 6 ? 3.0 : 7.0));
+
   const A = S.camp.length >= 20;
-  const B = tickAlgoritmo._decCont >= 5;
-  const C = nuovaV < S.vPiccoInRep * 0.25;
+  const B = tickAlgoritmo._decCont >= DEC_N;
+  const C = nuovaV < S.vPiccoInRep * 0.25 && S.vPiccoInRep > S.noiseFloor * 3;
 
   if (A && B && C) {
     S.inRep = false;
@@ -1906,6 +2215,8 @@ function tickAlgoritmo(e) {
     tickAlgoritmo._preRep    = 0;
     tickAlgoritmo._decCont   = 0;
     tickAlgoritmo._quietPost = 0;
+    _diagVel = 0; // FIX v4.8 Bug8: azzera vel live — senza questo il display
+                  // mostra l'ultima velocità della rep durante il periodo refrattario
     calcolaRep();
     S.camp   = [];
     S.vel    = [];
@@ -1914,13 +2225,14 @@ function tickAlgoritmo(e) {
     return;
   }
 
-  /* Sicurezza: rep troppo lunga (>350 campioni ≈ 7s) → forza fine */
-  if (S.vel.length > 350) {
+  /* Sicurezza: rep troppo lunga → forza fine (adattivo: 3s Olympic, 7s forza) */
+  if (S.vel.length > MAX_CAMP) {
     S.inRep = false;
     S.lastRepEndT = performance.now(); // : avvia periodo refrattario
     tickAlgoritmo._quietCont = 0;
     tickAlgoritmo._decCont   = 0;
     tickAlgoritmo._quietPost = 0;
+    _diagVel = 0; // FIX v4.8 Bug8: azzera vel live (path sicurezza MAX_CAMP)
     calcolaRep();
     S.camp   = [];
     S.vel    = [];
@@ -1961,18 +2273,26 @@ function calcolaRep() {
   S.repN++;
 
   // ── Velocità picco ──
-  S.vPicco = Math.max(...S.vel);
+  // FIX v4.8 Bug6: usa reduce invece di spread — coerente con aggiornaSetSummary().
+  S.vPicco = S.vel.reduce((a, b) => b > a ? b : a, -Infinity);
 
-  // ── Velocità media sulla finestra concentrica ──
-  // Prende solo i campioni dalla prima salita fino al picco (esclude
-  // la coda di decelerazione che contiene valori bassi non rappresentativi
-  // della vera velocità di sollevamento).
+  // ── Velocità media sulla finestra concentrica (ponderata su dt reale) ──
+  // Media aritmetica su campioni equidistanziati falsifica il risultato su device
+  // con Hz variabile (33-65 Hz su Android): campioni con dt lungo peserebbero uguale
+  // ai brevi. Media ponderata su S.campDt garantisce l'equivalente dell'integrale
+  // temporale diviso la durata della finestra concentrica.
   const iPicco = S.vel.indexOf(S.vPicco);
-  // Finestra: dal primo campione > 0 fino al picco incluso
-  const finestra = S.vel.slice(0, iPicco + 1).filter(v => v > 0);
-  S.vMedia = finestra.length > 0
-    ? finestra.reduce((a,b)=>a+b,0) / finestra.length
-    : S.vPicco;
+  let sumVdt = 0, sumDt = 0;
+  for (let i = 0; i <= iPicco; i++) {
+    if (S.vel[i] > 0) {
+      // FIX v4.8 Bug3: vel[i] (i>=1) è integrato con campDt[i-1] perché vel parte
+      // con [0] (sentinel) e campDt parte vuoto — l'indice dt corretto è i-1.
+      const dti = (i > 0 ? S.campDt[i - 1] : null) ?? 0.020;
+      sumVdt += S.vel[i] * dti;
+      sumDt  += dti;
+    }
+  }
+  S.vMedia = sumDt > 0 ? sumVdt / sumDt : S.vPicco;
 
   // Sanity check: vMedia non può superare vPicco
   if (S.vMedia > S.vPicco) S.vMedia = S.vPicco;
@@ -1988,10 +2308,11 @@ function calcolaRep() {
      Calcolate sull'intero array S.vel (campioni durante rep) con dt da S.campDt
   ─────────────────────────────────────────────────────────────────── */
 
-  // Durata rep (ms): somma dt campioni accumulati
-  const dtArr = S.campDt.length === S.vel.length - 1
-    ? S.campDt                          // campDt non include il primo vel=[0]
-    : S.campDt;
+  // Durata rep (ms): somma dt campioni accumulati.
+  // S.campDt ha sempre length = S.vel.length - 1 (vel parte con sentinel [0],
+  // campDt parte vuoto e accumula un entry per ogni campione integrato).
+  // FIX v4.9 BugC: rimosso ternario ridondante (entrambi i branch erano S.campDt).
+  const dtArr = S.campDt;
   S.durMs = Math.round(dtArr.reduce((a,b) => a+b, 0) * 1000);
 
   // ROM (cm): integrazione trapezoidale di vel*dt
@@ -2020,7 +2341,8 @@ function calcolaRep() {
 
   // Potenza media (W): F * vMedia, F = massa * g (solo forza gravitazionale)
   // Metodo Vbt Training: P = m * 9.81 * vMedia (standard per sollevamenti verticali)
-  const kg = parseFloat(document.getElementById('inCarico')?.value) || 0;
+  // FIX v4.8 Bug2: usa S.caricoKg (snapshot da avvia()) invece del DOM live.
+  const kg = S.caricoKg || 0;
   S.meanPowerW = kg > 0
     ? parseFloat((kg * 9.81 * S.vMedia).toFixed(2))
     : 0;
@@ -2204,7 +2526,8 @@ function parla(txt) {
 function logRep() {
   const es     = document.getElementById('selEs');
   const esNome = es ? es.options[es.selectedIndex].text : '';
-  const carico = parseFloat(document.getElementById('inCarico')?.value) || 0;
+  // FIX v4.8 Bug2: usa S.caricoKg (snapshot da avvia()) — coerente con calcolaRep().
+  const carico = S.caricoKg || 0;
   const atleta = (document.getElementById('inAtleta')?.value || '').trim();
   const nSerie = parseInt(document.getElementById('inNSerie')?.value) || 1;
   const now    = new Date();
